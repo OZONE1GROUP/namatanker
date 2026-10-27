@@ -13,6 +13,8 @@ class OrderListItem(BaseModel):
     requested_quantity_l: int
     tanker_code: str | None
     created_at: datetime
+    order_value: float | None = None
+    order_value_currency: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -84,6 +86,10 @@ class OrderDetail(BaseModel):
     audit_history: list[AuditEntryOut]
 
     available_actions: list[str]
+
+    price_per_liter: float | None = None
+    order_value: float | None = None
+    order_value_currency: str | None = None
 
 
 class CreateOrderRequest(BaseModel):

@@ -22,9 +22,12 @@ from app.models.core import (
     Driver,
     LoadingBay,
     Order,
+    PlatformSettings,
+    ProductPricing,
     SimulationSettings,
     Station,
     Tanker,
+    Transaction,
     User,
 )
 from app.models.enums import (
@@ -40,6 +43,7 @@ from app.models.enums import (
     UserRole,
 )
 from app.security import hash_password
+from app.services import finance as finance_service
 
 # Phase 7 demo accounts — every seeded user shares this password so the
 # login page can show it directly next to each role (SIMULATION MODE: a
@@ -93,6 +97,7 @@ def wipe(db):
     for model in [
         AuditEntry,
         Alert,
+        Transaction,
         Authorization,
         Order,
         LoadingBay,
@@ -101,6 +106,8 @@ def wipe(db):
         Station,
         Customer,
         SimulationSettings,
+        PlatformSettings,
+        ProductPricing,
         User,
     ]:
         db.execute(delete(model))
@@ -193,6 +200,25 @@ def seed():
             )
             drivers.append(d)
         db.add_all(drivers)
+        db.flush()
+
+        # --- Phase 8: price per liter per product + revenue-share settings ---
+        pricing_rows = [
+            ProductPricing(id=product.value, product=product, price_per_liter=price)
+            for product, price in finance_service.DEFAULT_PRICING_OMR.items()
+        ]
+        db.add_all(pricing_rows)
+        db.add(
+            PlatformSettings(
+                id=1,
+                commission_model="revenue_share",
+                platform_commission_pct=finance_service.DEFAULT_COMMISSION_PCT,
+                payment_gateway_enabled=False,
+                payment_gateway_provider=None,
+                payment_gateway_mode="test",
+                payment_gateway_reference=None,
+            )
+        )
         db.flush()
 
         # --- Orders across the last 7 days ---
@@ -392,6 +418,13 @@ def seed():
 
         db.flush()
 
+        # --- Phase 8: post revenue-share transactions for every closed order ---
+        transactions = []
+        for order in orders:
+            if order.status == OrderStatus.closed:
+                transactions.extend(finance_service.generate_order_transactions(db, order, actor="system (seed)"))
+        db.flush()
+
         # --- Alerts, tied to the exception orders above ---
         alerts = []
         offline_station = next(s for s in stations if s.connectivity_status == ConnectivityStatus.offline)
@@ -462,7 +495,8 @@ def seed():
         print(
             f"Seeded {len(stations)} stations ({len(loading_bays)} bays), {len(customers)} customers, "
             f"{len(tankers)} tankers, {len(drivers)} drivers, {len(orders)} orders "
-            f"({len(authorizations)} authorizations), {len(alerts)} alerts, {len(users)} demo user accounts."
+            f"({len(authorizations)} authorizations), {len(alerts)} alerts, {len(users)} demo user accounts, "
+            f"{len(pricing_rows)} product prices, {len(transactions)} finance transactions."
         )
         print(f"Demo login — any username below with password '{DEMO_PASSWORD}':")
         for username, display_name, role in DEMO_USERS:

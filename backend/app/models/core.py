@@ -21,6 +21,8 @@ from app.models.enums import (
     OrderStatus,
     Product,
     TankerStatus,
+    TransactionCategory,
+    TransactionType,
     UserRole,
 )
 
@@ -238,3 +240,80 @@ class SimulationSettings(Base):
     speed_multiplier: Mapped[int] = mapped_column(default=1)
     is_paused: Mapped[bool] = mapped_column(default=False)
     mode: Mapped[str] = mapped_column(String(32), default="SIMULATION")
+
+
+class ProductPricing(Base):
+    """
+    Phase 8 — price per liter configured per Product. The id is the
+    product's own enum value (one row per product, upserted rather than
+    multiplied), so "which product" and "which row" are never out of sync.
+    """
+
+    __tablename__ = "product_pricing"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    product: Mapped[Product] = mapped_column(Enum(Product, name="pricing_product"), unique=True)
+    price_per_liter: Mapped[float] = mapped_column(Numeric(10, 4))
+    currency: Mapped[str] = mapped_column(String(8), default="OMR")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class PlatformSettings(Base):
+    """
+    Phase 8 — singleton row for the platform's revenue-share commission
+    percentage and its (SIMULATION MODE) payment gateway configuration.
+    No real payment credentials are ever stored here — this is a demo
+    toggle/config surface, consistent with the rest of this simulator.
+    """
+
+    __tablename__ = "platform_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    commission_model: Mapped[str] = mapped_column(String(32), default="revenue_share")
+    platform_commission_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=12.50)
+    payment_gateway_enabled: Mapped[bool] = mapped_column(default=False)
+    payment_gateway_provider: Mapped[str | None] = mapped_column(String(64))
+    payment_gateway_mode: Mapped[str] = mapped_column(String(16), default="test")
+    payment_gateway_reference: Mapped[str | None] = mapped_column(String(120))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Transaction(Base):
+    """
+    Phase 8 — finance ledger. Two rows are auto-generated the moment an
+    order is closed (see app/services/finance.py): an inbound
+    customer_payment for the full order value, and an outbound
+    station_payout for that value minus the platform's commission —
+    the platform's own retained revenue is the difference between the two,
+    derivable rather than stored as a third row. SIMULATION MODE: these
+    are synthetic ledger entries; no real money moves.
+    """
+
+    __tablename__ = "transactions"
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=_uuid)
+    transaction_number: Mapped[str] = mapped_column(String(32), unique=True)
+    order_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("orders.id"))
+
+    type: Mapped[TransactionType] = mapped_column(Enum(TransactionType, name="transaction_type"))
+    category: Mapped[TransactionCategory] = mapped_column(Enum(TransactionCategory, name="transaction_category"))
+    amount: Mapped[float] = mapped_column(Numeric(12, 3))
+    currency: Mapped[str] = mapped_column(String(8), default="OMR")
+
+    counterparty_type: Mapped[str] = mapped_column(String(32))
+    counterparty_name: Mapped[str] = mapped_column(String(200))
+
+    # Breakdown fields — populated on the customer_payment/station_payout pair
+    # so the commission allocation of each transaction can be reported
+    # without re-joining the opposite leg.
+    commission_pct: Mapped[float | None] = mapped_column(Numeric(5, 2))
+    commission_amount: Mapped[float | None] = mapped_column(Numeric(12, 3))
+    net_amount: Mapped[float | None] = mapped_column(Numeric(12, 3))
+
+    payment_method: Mapped[str] = mapped_column(String(32), default="internal_ledger")
+    status: Mapped[str] = mapped_column(String(32), default="completed")
+    description: Mapped[str | None] = mapped_column(Text)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    order: Mapped["Order | None"] = relationship()

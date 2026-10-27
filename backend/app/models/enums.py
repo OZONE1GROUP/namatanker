@@ -121,3 +121,21 @@ class UserRole(str, enum.Enum):
     auditor = "auditor"                           # read-only compliance/audit visibility
     admin = "admin"                               # full access incl. simulation clock controls
 
+
+class TransactionType(str, enum.Enum):
+    """
+    Phase 8 — finance & revenue-share module. Every ledger row is either
+    money coming into the platform (inbound, from the customer) or money
+    going out of it (outbound, the revenue-share payout to the station).
+    """
+
+    inbound = "inbound"
+    outbound = "outbound"
+
+
+class TransactionCategory(str, enum.Enum):
+    customer_payment = "customer_payment"      # inbound — full order value collected from the customer
+    station_payout = "station_payout"          # outbound — order value minus platform commission
+    refund = "refund"                           # outbound — reversal of a customer payment (not auto-generated)
+    manual_adjustment = "manual_adjustment"      # either direction — admin-entered correction
+

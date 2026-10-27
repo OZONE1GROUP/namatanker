@@ -21,6 +21,7 @@ import { Alerts } from "@/pages/Alerts"
 import { EdgeGateway } from "@/pages/EdgeGateway"
 import { EventsReconciliation } from "@/pages/EventsReconciliation"
 import { Reports } from "@/pages/Reports"
+import { Finance } from "@/pages/Finance"
 import { Admin } from "@/pages/Admin"
 import { PlaceholderPage } from "@/pages/PlaceholderPage"
 import { NAV_ITEMS } from "@/config/navigation"
@@ -41,6 +42,7 @@ const BUILT_PATHS = new Set([
   "/edge-gateway",
   "/events",
   "/reports",
+  "/finance",
   "/admin",
 ])
 
@@ -68,6 +70,7 @@ export default function App() {
           <Route path="/edge-gateway" element={<EdgeGateway />} />
           <Route path="/events" element={<EventsReconciliation />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/finance" element={<Finance />} />
           <Route path="/admin" element={<Admin />} />
           {NAV_ITEMS.filter((n) => !BUILT_PATHS.has(n.path)).map((item) => (
             <Route key={item.path} path={item.path} element={<PlaceholderPage />} />

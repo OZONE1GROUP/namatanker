@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth_deps import get_current_user
 from app.config import get_settings
-from app.routers import alerts, audit, auth, customers, dashboard, dataflow, fleet, live, orders, stations
+from app.routers import alerts, audit, auth, customers, dashboard, dataflow, finance, fleet, live, orders, stations
 from app.services.simulation import engine
 
 settings = get_settings()
@@ -23,9 +23,13 @@ app = FastAPI(
     description=(
         "SIMULATION MODE — all data is synthetic. This API serves a simulated "
         "digital twin of a tanker loading and delivery operation and is never "
-        "connected to real PLCs, meters, GPS devices or industrial equipment."
+        "connected to real PLCs, meters, GPS devices or industrial equipment. "
+        "Phase 8 adds a finance & revenue-share module (price per liter, an "
+        "inbound/outbound transaction ledger, and commission allocation "
+        "reporting) plus a payment-gateway configuration surface — all still "
+        "synthetic, never a real payment integration."
     ),
-    version="0.7.0-phase7",
+    version="0.8.0-phase8",
     lifespan=lifespan,
 )
 
@@ -54,6 +58,7 @@ app.include_router(customers.router, prefix="/api", dependencies=[Depends(get_cu
 app.include_router(live.router, prefix="/api")
 app.include_router(alerts.router, prefix="/api", dependencies=[Depends(get_current_user)])
 app.include_router(dataflow.router, prefix="/api", dependencies=[Depends(get_current_user)])
+app.include_router(finance.router, prefix="/api", dependencies=[Depends(get_current_user)])
 
 
 @app.get("/api/health", tags=["health"])

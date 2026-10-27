@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/Card"
 import { StatusBadge } from "@/components/ui/Badge"
 import { Button } from "@/components/ui/Button"
 import { statusTone, prettyStatus } from "@/lib/orderStatus"
-import { formatDateTime, formatNumber } from "@/lib/utils"
+import { formatDateTime, formatNumber, formatOMR } from "@/lib/utils"
 import { NewOrderModal } from "@/components/orders/NewOrderModal"
 
 const ALL_STATUSES = [
@@ -121,6 +121,7 @@ export function Orders() {
                 <th className="px-4 py-2.5 font-medium">Station</th>
                 <th className="px-4 py-2.5 font-medium">Product</th>
                 <th className="px-4 py-2.5 font-medium">Qty (L)</th>
+                <th className="px-4 py-2.5 font-medium">Value</th>
                 <th className="px-4 py-2.5 font-medium">Tanker</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Created</th>
@@ -139,13 +140,14 @@ export function Orders() {
                   <td className="px-4 py-2.5 text-(--app-text-muted)">{o.station_name}</td>
                   <td className="px-4 py-2.5 text-(--app-text-muted)">{prettyStatus(o.product)}</td>
                   <td className="px-4 py-2.5 tabular-nums text-(--app-text-muted)">{formatNumber(o.requested_quantity_l)}</td>
+                  <td className="px-4 py-2.5 tabular-nums text-(--app-text-muted)">{o.order_value != null ? formatOMR(o.order_value) : "—"}</td>
                   <td className="px-4 py-2.5 text-(--app-text-muted)">{o.tanker_code ?? "—"}</td>
                   <td className="px-4 py-2.5"><StatusBadge tone={statusTone(o.status)} label={prettyStatus(o.status)} /></td>
                   <td className="px-4 py-2.5 text-(--app-text-muted)">{formatDateTime(o.created_at)}</td>
                 </tr>
               ))}
               {data?.items.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-(--app-text-muted)">No orders match these filters.</td></tr>
+                <tr><td colSpan={9} className="px-4 py-10 text-center text-(--app-text-muted)">No orders match these filters.</td></tr>
               )}
             </tbody>
           </table>

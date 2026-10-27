@@ -16,6 +16,7 @@ import {
   ScrollText,
   HeartPulse,
   Settings,
+  Wallet,
   type LucideIcon,
 } from "lucide-react"
 
@@ -42,6 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Events & Reconciliation", path: "/events", icon: ListTree, phase: 5, description: "End-to-end event tracing and reconciliation" },
   { label: "Alerts & Exceptions", path: "/alerts", icon: AlertTriangle, phase: 3, description: "Operational alert management center" },
   { label: "Analytics & Reports", path: "/reports", icon: BarChart3, phase: 6, description: "Enterprise reporting centre" },
+  { label: "Finance & Revenue Share", path: "/finance", icon: Wallet, phase: 8, description: "Pricing, transactions and commission allocation reporting" },
   { label: "Audit Trail", path: "/audit", icon: ScrollText, phase: 2, description: "Append-only log of system and user actions" },
   { label: "System Health", path: "/system-health", icon: HeartPulse, phase: 4, description: "Component availability and processing latency" },
   { label: "Administration & Settings", path: "/admin", icon: Settings, phase: 7, description: "Roles, permissions and simulator configuration" },

@@ -20,6 +20,7 @@ from app.schemas.orders import (
     ReasonRequest,
     StartLoadingRequest,
 )
+from app.services import finance as finance_service
 from app.services import orders as order_service
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -47,6 +48,9 @@ def _order_detail(db: Session, order: Order) -> OrderDetail:
 
     bay = db.get(LoadingBay, order.loading_bay_id) if order.loading_bay_id else None
     driver = db.get(Driver, order.driver_id) if order.driver_id else None
+
+    price_per_liter = finance_service.get_price_per_liter(db, order.product)
+    order_value = finance_service.compute_order_value(db, order)
 
     return OrderDetail(
         id=order.id,
@@ -76,6 +80,9 @@ def _order_detail(db: Session, order: Order) -> OrderDetail:
         authorization=order.authorization,
         audit_history=list(audit_rows),
         available_actions=ACTIONS_BY_STATUS.get(order.status, []),
+        price_per_liter=float(price_per_liter) if price_per_liter is not None else None,
+        order_value=float(order_value) if order_value is not None else None,
+        order_value_currency="OMR" if order_value is not None else None,
     )
 
 
@@ -113,20 +120,26 @@ def list_orders(
         base.order_by(Order.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     ).scalars().all()
 
-    items = [
-        OrderListItem(
-            id=o.id,
-            order_number=o.order_number,
-            customer_name=o.customer.name,
-            station_name=o.station.name,
-            product=o.product.value,
-            status=o.status.value,
-            requested_quantity_l=o.requested_quantity_l,
-            tanker_code=o.tanker.tanker_code if o.tanker else None,
-            created_at=o.created_at,
+    pricing = {p.product: p for p in finance_service.list_pricing(db)}
+    items = []
+    for o in rows:
+        price_row = pricing.get(o.product)
+        order_value = finance_service.compute_order_value(db, o) if price_row else None
+        items.append(
+            OrderListItem(
+                id=o.id,
+                order_number=o.order_number,
+                customer_name=o.customer.name,
+                station_name=o.station.name,
+                product=o.product.value,
+                status=o.status.value,
+                requested_quantity_l=o.requested_quantity_l,
+                tanker_code=o.tanker.tanker_code if o.tanker else None,
+                created_at=o.created_at,
+                order_value=float(order_value) if order_value is not None else None,
+                order_value_currency="OMR" if order_value is not None else None,
+            )
         )
-        for o in rows
-    ]
     return OrderListResponse(items=items, total=total, page=page, page_size=page_size)
 
 

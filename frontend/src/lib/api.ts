@@ -46,6 +46,8 @@ export const api = {
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
 }
 
 // ---- Domain types (mirrors backend Pydantic schemas) ----
@@ -284,6 +286,8 @@ export interface OrderListItem {
   requested_quantity_l: number
   tanker_code: string | null
   created_at: string
+  order_value: number | null
+  order_value_currency: string | null
 }
 
 export interface OrderListResponse {
@@ -374,6 +378,9 @@ export interface OrderDetail {
   authorization: AuthorizationOut | null
   audit_history: AuditEntryOut[]
   available_actions: OrderAction[]
+  price_per_liter: number | null
+  order_value: number | null
+  order_value_currency: string | null
 }
 
 export function getOrder(id: string) {
@@ -599,4 +606,125 @@ export interface DataFlowGraph {
 
 export function getDataFlowGraph() {
   return api.get<DataFlowGraph>("/dataflow/graph")
+}
+
+// ---- Finance & Revenue Share (Phase 8) ----
+// SIMULATION MODE: all pricing, transactions and the "payment gateway" are
+// synthetic — this module never connects to a real payment processor.
+
+export interface PricingOut {
+  product: string
+  price_per_liter: number
+  currency: string
+  updated_at: string
+}
+
+export function getPricing() {
+  return api.get<PricingOut[]>("/finance/pricing")
+}
+
+export function setPricing(product: string, price_per_liter: number) {
+  return api.put<PricingOut>(`/finance/pricing/${product}`, { price_per_liter })
+}
+
+export interface PlatformSettingsOut {
+  commission_model: string
+  platform_commission_pct: number
+  payment_gateway_enabled: boolean
+  payment_gateway_provider: string | null
+  payment_gateway_mode: string
+  payment_gateway_reference: string | null
+  updated_at: string
+}
+
+export function getPlatformSettings() {
+  return api.get<PlatformSettingsOut>("/finance/settings")
+}
+
+export function updatePlatformSettings(payload: Partial<{
+  platform_commission_pct: number
+  payment_gateway_enabled: boolean
+  payment_gateway_provider: string | null
+  payment_gateway_mode: string
+  payment_gateway_reference: string | null
+}>) {
+  return api.put<PlatformSettingsOut>("/finance/settings", payload)
+}
+
+export interface TransactionOut {
+  id: string
+  transaction_number: string
+  order_id: string | null
+  order_number: string | null
+  type: "inbound" | "outbound"
+  category: string
+  amount: number
+  currency: string
+  counterparty_type: string
+  counterparty_name: string
+  commission_pct: number | null
+  commission_amount: number | null
+  net_amount: number | null
+  payment_method: string
+  status: string
+  description: string | null
+  created_at: string
+}
+
+export interface TransactionListResponse {
+  items: TransactionOut[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export function getTransactions(params?: {
+  type?: "inbound" | "outbound"
+  category?: string
+  order_id?: string
+  station_id?: string
+  search?: string
+  page?: number
+  page_size?: number
+}) {
+  const qs = new URLSearchParams()
+  if (params?.type) qs.set("type", params.type)
+  if (params?.category) qs.set("category", params.category)
+  if (params?.order_id) qs.set("order_id", params.order_id)
+  if (params?.station_id) qs.set("station_id", params.station_id)
+  if (params?.search) qs.set("search", params.search)
+  qs.set("page", String(params?.page ?? 1))
+  qs.set("page_size", String(params?.page_size ?? 25))
+  return api.get<TransactionListResponse>(`/finance/transactions?${qs.toString()}`)
+}
+
+export interface FinanceSummary {
+  period_days: number
+  total_inbound: number
+  total_outbound: number
+  platform_net_revenue: number
+  transaction_count: number
+  orders_with_transactions: number
+}
+
+export function getFinanceSummary(days = 30) {
+  return api.get<FinanceSummary>(`/finance/summary?days=${days}`)
+}
+
+export interface StationCommissionRow {
+  station_id: string
+  station_name: string
+  order_count: number
+  gross_revenue: number
+  commission_amount: number
+  net_payout: number
+}
+
+export interface CommissionReport {
+  period_days: number
+  rows: StationCommissionRow[]
+}
+
+export function getCommissionReport(days = 30) {
+  return api.get<CommissionReport>(`/finance/commission-report?days=${days}`)
 }

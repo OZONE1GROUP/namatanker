@@ -19,7 +19,7 @@ import { StatusBadge } from "@/components/ui/Badge"
 import { Button } from "@/components/ui/Button"
 import { Modal } from "@/components/ui/Modal"
 import { statusTone, prettyStatus } from "@/lib/orderStatus"
-import { formatDateTime, formatNumber } from "@/lib/utils"
+import { formatDateTime, formatNumber, formatOMR } from "@/lib/utils"
 import { useAuthStore } from "@/lib/auth"
 
 // Mirrors the backend's require_role(authorization_officer, admin) on
@@ -223,6 +223,22 @@ export function OrderDetailPage() {
                 <InfoRow label="Actual loaded" value={order.actual_loaded_quantity_l != null ? `${formatNumber(order.actual_loaded_quantity_l)} L` : null} />
                 <InfoRow label="Delivered" value={order.delivery_quantity_l != null ? `${formatNumber(order.delivery_quantity_l)} L` : null} />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Order Value</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+              <div>
+                <InfoRow label="Price per liter" value={order.price_per_liter != null ? formatOMR(order.price_per_liter) : "Not defined"} />
+                <InfoRow label="Order value" value={order.order_value != null ? formatOMR(order.order_value) : "Not defined"} />
+              </div>
+              {order.order_value == null && (
+                <p className="self-center text-xs text-status-amber sm:col-span-1">
+                  No price per liter is configured for {prettyStatus(order.product)} yet — set it under
+                  Administration &amp; Settings → Pricing &amp; Commission Settings.
+                </p>
+              )}
             </CardContent>
           </Card>
 

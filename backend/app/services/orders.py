@@ -27,6 +27,7 @@ from app.models.enums import (
     OrderStatus,
     TankerStatus,
 )
+from app.services import finance as finance_service
 
 ORDER_WORKFLOW_NOTE = (
     "Draft/Submitted/Validated are collapsed into order creation, and "
@@ -292,7 +293,16 @@ def close_order(db: Session, order: Order, actor: str = "Operations Manager (dem
     previous = order.status.value
     order.status = OrderStatus.closed
     _audit(db, order, "close", previous, order.status.value, actor=actor)
-    return ActionResult(order, "Order closed.")
+
+    # Phase 8 — closing an order is the revenue-share trigger: post the
+    # inbound customer-payment / outbound station-payout transaction pair.
+    # A no-op (returns []) if the product has no price configured yet, so
+    # an undefined price per liter never silently posts a wrong amount.
+    note = "Order closed."
+    posted = finance_service.generate_order_transactions(db, order, actor=actor)
+    if posted:
+        note = "Order closed; revenue-share transactions posted."
+    return ActionResult(order, note)
 
 
 CANCELLABLE_STATES = {
