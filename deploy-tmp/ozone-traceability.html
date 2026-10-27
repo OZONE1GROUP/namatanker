@@ -1,0 +1,2760 @@
+<title>OZONE Traceability</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* OZONE Manufacturing & Traceability Platform — UI simulator styles */
+/* Layout concept: fixed-width industrial sidebar (persistent nav) + sticky
+   top bar (search, alerts, identity) + scrolling content column with a
+   breadcrumb rail; detail pages use tab strips and a left-rule timeline
+   for stage/revision history so depth reads as depth, not just more table. */
+:root {
+  /* color */
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --surface-2: #e4e9ee;
+  --border: #d2dae1;
+  --ink: #101b26;
+  --muted: #5b6b78;
+  --faint: #8695a1;
+  --sidebar-bg: #0b2545;
+  --sidebar-bg-2: #0e2d53;
+  --sidebar-fg: #d9e4ee;
+  --sidebar-fg-dim: #93a8bd;
+  --sidebar-active: #123a63;
+  --accent: #0f8f84;
+  --accent-ink: #ffffff;
+  --accent-weak: #e1f2ef;
+  --good: #1f8f5f;
+  --good-weak: #e4f5ec;
+  --warn: #ad7418;
+  --warn-weak: #fbf0dc;
+  --bad: #bb3b34;
+  --bad-weak: #fbe8e6;
+  --hold: #7c4aa8;
+  --hold-weak: #f1e8f8;
+  --info: #2b6cb0;
+  --info-weak: #e6eefa;
+  /* type */
+  --font-display: 'Archivo', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a141f; --surface: #101c29; --surface-2: #16263750; --border: #253a4d;
+    --ink: #e6edf3; --muted: #93a7b8; --faint: #6c8192;
+    --sidebar-bg: #071523; --sidebar-bg-2: #0a1c30; --sidebar-fg: #d9e4ee; --sidebar-fg-dim: #7f97ab; --sidebar-active: #102c47;
+    --accent: #2bbdae; --accent-ink: #052521; --accent-weak: #0f2d2b;
+    --good: #3fbe82; --good-weak: #0f2a1f; --warn: #e0a83e; --warn-weak: #2e2410;
+    --bad: #e2655f; --bad-weak: #341614; --hold: #b98ae0; --hold-weak: #261a33;
+    --info: #6fa8dc; --info-weak: #132234;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a141f; --surface: #101c29; --surface-2: #16263750; --border: #253a4d;
+  --ink: #e6edf3; --muted: #93a7b8; --faint: #6c8192;
+  --sidebar-bg: #071523; --sidebar-bg-2: #0a1c30; --sidebar-fg: #d9e4ee; --sidebar-fg-dim: #7f97ab; --sidebar-active: #102c47;
+  --accent: #2bbdae; --accent-ink: #052521; --accent-weak: #0f2d2b;
+  --good: #3fbe82; --good-weak: #0f2a1f; --warn: #e0a83e; --warn-weak: #2e2410;
+  --bad: #e2655f; --bad-weak: #341614; --hold: #b98ae0; --hold-weak: #261a33;
+  --info: #6fa8dc; --info-weak: #132234;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { background: var(--bg); }
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; margin: 0; text-wrap: balance; }
+a { color: var(--accent); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button { font-family: inherit; }
+
+/* ---------- App shell ---------- */
+#app { display: flex; min-height: 100%; }
+
+#sidebar {
+  width: 236px; flex: 0 0 236px; background: var(--sidebar-bg); color: var(--sidebar-fg);
+  position: sticky; top: 0; align-self: flex-start; height: 100vh; overflow-y: auto;
+  display: flex; flex-direction: column; z-index: 20;
+  transition: transform .2s ease;
+}
+#sidebar .brand {
+  display: flex; align-items: center; gap: 10px; padding: 18px max(16px, env(safe-area-inset-right, 0px)) 14px max(16px, env(safe-area-inset-left, 0px));
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+#sidebar .brand .mark {
+  width: 30px; height: 30px; border-radius: 7px; background: var(--accent); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; font-size: 14px; flex: none;
+}
+#sidebar .brand .name { font-family: var(--font-display); font-weight: 700; font-size: 14.5px; line-height: 1.2; }
+#sidebar .brand .sub { font-size: 10.5px; color: var(--sidebar-fg-dim); letter-spacing: .03em; }
+#sidebar nav { padding: 10px max(10px, env(safe-area-inset-right, 0px)) 16px max(10px, env(safe-area-inset-left, 0px)); flex: 1; }
+#sidebar .navgroup-label { font-size: 10px; text-transform: uppercase; letter-spacing: .09em; color: var(--sidebar-fg-dim); padding: 14px 10px 6px; }
+.navitem {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 7px;
+  color: var(--sidebar-fg-dim); font-size: 13.2px; cursor: pointer; margin-bottom: 1px; font-weight: 500;
+}
+.navitem .ic { width: 17px; height: 17px; flex: none; opacity: .9; }
+.navitem:hover { background: rgba(255,255,255,0.06); color: var(--sidebar-fg); }
+.navitem.active { background: var(--sidebar-active); color: #fff; }
+.navitem .cnt { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; background: rgba(255,255,255,0.12); padding: 1px 6px; border-radius: 20px; }
+.navitem.active .cnt { background: var(--accent); color: var(--accent-ink); }
+#sidebar .foot { padding: 12px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px)); border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: var(--sidebar-fg-dim); }
+#sidebar .foot b { color: var(--sidebar-fg); }
+
+#sidebar-overlay { display: none; }
+
+#main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+#topbar {
+  position: sticky; top: 0; z-index: 15; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); min-height: 54px;
+}
+#hamburger { display: none; background: none; border: 1px solid var(--border); border-radius: 7px; width: 34px; height: 34px; align-items: center; justify-content: center; color: var(--ink); cursor: pointer; flex: none; }
+#hamburger svg { width: 18px; height: 18px; }
+
+.searchwrap { position: relative; flex: 1; max-width: 480px; }
+#globalsearch {
+  width: 100%; padding: 8px 12px 8px 34px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--ink); font-size: 13.2px; font-family: var(--font-body);
+}
+#globalsearch:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--surface); }
+.searchwrap svg.searchic { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--faint); pointer-events: none; }
+#searchdrop {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 10px 28px rgba(10,20,30,0.18); max-height: 420px; overflow-y: auto; z-index: 30;
+}
+#searchdrop .sr-group-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); padding: 9px 12px 4px; }
+#searchdrop .sr-item { display: flex; flex-direction: column; gap: 1px; padding: 7px 12px; cursor: pointer; border-top: 1px solid var(--border); }
+#searchdrop .sr-item:first-child { border-top: none; }
+#searchdrop .sr-item:hover { background: var(--surface-2); }
+#searchdrop .sr-item .t { font-family: var(--font-mono); font-size: 12.3px; font-weight: 600; }
+#searchdrop .sr-item .s { font-size: 11.5px; color: var(--muted); }
+#searchdrop .sr-empty { padding: 16px; color: var(--muted); font-size: 12.5px; text-align: center; }
+#searchdrop .sr-more { padding: 8px 12px; font-size: 11.5px; color: var(--accent); text-align: center; border-top: 1px solid var(--border); cursor: pointer; }
+
+.topbar-right { display: flex; align-items: center; gap: 6px; margin-left: auto; flex: none; }
+.pill { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+.pill.demo { background: var(--warn-weak); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
+.iconbtn { position: relative; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.iconbtn:hover { background: var(--surface-2); }
+.iconbtn svg { width: 17px; height: 17px; }
+.iconbtn .dot { position: absolute; top: -3px; right: -3px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 20px; background: var(--bad); color: #fff; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); }
+.identity { display: flex; align-items: center; gap: 8px; padding-left: 8px; border-left: 1px solid var(--border); margin-left: 2px; cursor: default; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-weak); color: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 12px; flex: none; }
+.identity .who { line-height: 1.2; }
+.identity .who .nm { font-size: 12.3px; font-weight: 600; }
+.identity .who .rl { font-size: 10.5px; color: var(--muted); }
+.identity .who { display: none; }
+@media (min-width: 760px) { .identity .who { display: block; } }
+
+#breadbar { padding: 11px max(20px, env(safe-area-inset-right, 0px)) 0 max(20px, env(safe-area-inset-left, 0px)); }
+.breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.breadcrumb .bc-item { cursor: pointer; }
+.breadcrumb .bc-item:hover { color: var(--accent); text-decoration: underline; }
+.breadcrumb .bc-sep { color: var(--faint); }
+.breadcrumb .bc-item.current { color: var(--ink); font-weight: 600; cursor: default; }
+.breadcrumb .bc-item.current:hover { text-decoration: none; }
+
+#viewport { flex: 1; padding: 14px max(20px, env(safe-area-inset-right, 0px)) 48px max(20px, env(safe-area-inset-left, 0px)); max-width: 1320px; width: 100%; }
+
+/* ---------- Primitives ---------- */
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 6px 0 16px; flex-wrap: wrap; }
+.page-head h1 { font-size: 21px; }
+.page-head .lede { color: var(--muted); font-size: 12.8px; margin-top: 3px; max-width: 62ch; }
+.page-head .headmeta { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 7px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.card-pad { padding: 16px; }
+.grid { display: grid; gap: 12px; }
+.grid-kpi { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.grid-charts { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+
+.kpi { padding: 14px 15px; display: flex; flex-direction: column; gap: 5px; cursor: pointer; }
+.kpi:hover { border-color: var(--accent); }
+.kpi .kv { font-family: var(--font-display); font-size: 23px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.kpi .kl { font-size: 11.3px; color: var(--muted); font-weight: 600; }
+.kpi .kc { font-size: 10.5px; color: var(--faint); }
+.kpi.flag-bad .kv { color: var(--bad); }
+.kpi.flag-warn .kv { color: var(--warn); }
+.kpi.flag-good .kv { color: var(--good); }
+
+.section-title { font-family: var(--font-display); font-size: 13px; font-weight: 700; margin: 22px 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.section-title .hint { font-size: 11px; color: var(--faint); font-weight: 500; }
+
+.chart-card { padding: 14px 16px 10px; }
+.chart-card .ct { font-family: var(--font-display); font-weight: 700; font-size: 12.6px; margin-bottom: 2px; }
+.chart-card .cd { font-size: 11px; color: var(--faint); margin-bottom: 8px; }
+svg.chart text { fill: var(--muted); font-family: var(--font-body); }
+svg.chart .gridline { stroke: var(--border); stroke-width: 1; }
+svg.chart .barfill { fill: var(--accent); }
+svg.chart .barfill.b2 { fill: var(--hold); }
+svg.chart .valuelabel { fill: var(--ink); font-weight: 600; font-family: var(--font-mono); }
+
+table.dtable { width: 100%; border-collapse: collapse; font-size: 12.8px; }
+table.dtable th { text-align: left; font-size: 10.6px; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); font-weight: 700; padding: 9px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.dtable th.sortable { cursor: pointer; user-select: none; }
+table.dtable th.sortable:hover { color: var(--accent); }
+table.dtable td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.dtable tbody tr.clickable { cursor: pointer; }
+table.dtable tbody tr.clickable:hover { background: var(--surface-2); }
+table.dtable tbody tr:last-child td { border-bottom: none; }
+.table-wrap { overflow-x: auto; }
+.table-empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 12.8px; }
+
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.8px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; line-height: 1.5; }
+.badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.badge.b-good { background: var(--good-weak); color: var(--good); }
+.badge.b-warn { background: var(--warn-weak); color: var(--warn); }
+.badge.b-bad { background: var(--bad-weak); color: var(--bad); }
+.badge.b-hold { background: var(--hold-weak); color: var(--hold); }
+.badge.b-info { background: var(--info-weak); color: var(--info); }
+.badge.b-muted { background: var(--surface-2); color: var(--muted); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
+.filters select, .filters input[type=search] {
+  font-family: var(--font-body); font-size: 12.3px; padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--ink);
+}
+.filters .fcount { font-size: 11.5px; color: var(--faint); margin-left: auto; }
+
+.tabstrip { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin: 4px 0 16px; overflow-x: auto; }
+.tabstrip .tab { padding: 9px 13px; font-size: 12.5px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tabstrip .tab:hover { color: var(--ink); }
+.tabstrip .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tabstrip .tab .tc { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); margin-left: 4px; }
+
+.detail-grid { display: grid; grid-template-columns: 2.1fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 880px) { .detail-grid { grid-template-columns: 1fr; } }
+
+.kv-list { display: grid; grid-template-columns: 1fr; gap: 0; }
+.kv-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 12.6px; }
+.kv-row:last-child { border-bottom: none; }
+.kv-row .k { color: var(--muted); }
+.kv-row .v { font-weight: 600; text-align: right; }
+.kv-row .v.mono { font-weight: 500; }
+
+.link { color: var(--accent); cursor: pointer; font-weight: 600; }
+.link:hover { text-decoration: underline; }
+.linkline { display: flex; align-items: center; gap: 6px; }
+
+.stepper { display: flex; flex-wrap: wrap; gap: 0; margin: 4px 0 2px; }
+.stepper .step { display: flex; align-items: center; gap: 6px; font-size: 11.3px; padding: 6px 12px 6px 0; color: var(--faint); font-weight: 600; }
+.stepper .step .sdot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--faint); flex: none; }
+.stepper .step.done { color: var(--good); } .stepper .step.done .sdot { background: var(--good); border-color: var(--good); }
+.stepper .step.now { color: var(--accent); } .stepper .step.now .sdot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+.stepper .step:not(:last-child)::after { content: ''; width: 18px; height: 1px; background: var(--border); margin-left: 8px; }
+
+.timeline { position: relative; padding-left: 26px; }
+.timeline::before { content: ''; position: absolute; left: 8px; top: 4px; bottom: 4px; width: 2px; background: var(--border); }
+.tl-item { position: relative; padding-bottom: 18px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item .tl-dot { position: absolute; left: -26px; top: 2px; width: 17px; height: 17px; border-radius: 50%; background: var(--surface); border: 2px solid var(--faint); display: flex; align-items: center; justify-content: center; }
+.tl-item .tl-dot svg { width: 9px; height: 9px; }
+.tl-item.done .tl-dot { border-color: var(--good); background: var(--good-weak); color: var(--good); }
+.tl-item.current .tl-dot { border-color: var(--accent); background: var(--accent-weak); color: var(--accent); box-shadow: 0 0 0 4px var(--accent-weak); }
+.tl-item.blocked .tl-dot { border-color: var(--bad); background: var(--bad-weak); color: var(--bad); }
+.tl-item.skipped .tl-dot { border-color: var(--faint); background: var(--surface-2); color: var(--faint); }
+.tl-item.pending .tl-dot { border-color: var(--border); }
+.tl-item .tl-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tl-item .tl-name { font-weight: 700; font-size: 12.8px; }
+.tl-item.pending .tl-name { color: var(--faint); font-weight: 600; }
+.tl-item .tl-when { font-size: 11px; color: var(--faint); font-family: var(--font-mono); }
+.tl-item .tl-note { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.tl-item .tl-note.warn-note { color: var(--bad); }
+.tl-item .tl-actor { font-size: 11px; color: var(--faint); margin-top: 2px; }
+
+.doclist-row, .relrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.6px; cursor: pointer; }
+.doclist-row:last-child, .relrow:last-child { border-bottom: none; }
+.doclist-row:hover, .relrow:hover { background: var(--surface-2); margin: 0 -10px; padding-left: 10px; padding-right: 10px; border-radius: 6px; }
+.doclist-row .main .t { font-weight: 600; } .doclist-row .main .s { font-size: 11px; color: var(--muted); }
+
+.qr-box { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px; }
+.qr-box svg { border-radius: 8px; }
+.qr-cap { font-size: 10.2px; color: var(--faint); text-align: center; line-height: 1.4; }
+.qr-id { font-family: var(--font-mono); font-weight: 700; font-size: 13px; }
+
+.empty { text-align: center; padding: 50px 20px; color: var(--muted); }
+.empty h3 { font-size: 15px; margin-bottom: 6px; color: var(--ink); }
+.empty p { font-size: 12.8px; max-width: 40ch; margin: 0 auto; }
+
+.banner { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-radius: 10px; font-size: 12.3px; margin-bottom: 16px; border: 1px solid; }
+.banner.info { background: var(--info-weak); color: var(--info); border-color: color-mix(in srgb, var(--info) 30%, transparent); }
+.banner.warn { background: var(--warn-weak); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+.banner svg { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+.banner b { color: var(--ink); }
+
+.notif-item { display: flex; gap: 10px; padding: 12px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.notif-item:hover { background: var(--surface-2); }
+.notif-item .nsev { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: none; }
+.notif-item .nsev.critical { background: var(--bad); } .notif-item .nsev.warning { background: var(--warn); } .notif-item .nsev.info { background: var(--info); }
+.notif-item .ncat { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); font-weight: 700; }
+.notif-item .ntxt { font-size: 12.6px; margin-top: 1px; }
+.notif-item .ntime { font-size: 11px; color: var(--faint); margin-left: auto; white-space: nowrap; }
+
+.statusgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.statusrow { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; font-size: 12.3px; }
+
+.progress-bar { height: 6px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.progress-bar > i { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
+
+.dossier-item { display: flex; align-items: center; gap: 9px; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 12.5px; }
+.dossier-item:last-child { border-bottom: none; }
+.dossier-item svg { width: 15px; height: 15px; flex: none; }
+.dossier-item.present { color: var(--ink); } .dossier-item.present svg { color: var(--good); }
+.dossier-item.missing { color: var(--muted); } .dossier-item.missing svg { color: var(--faint); }
+
+.role-card { padding: 12px 14px; }
+.role-card .rn { font-weight: 700; font-size: 12.6px; } .role-card .rd { font-size: 11.8px; color: var(--muted); margin-top: 3px; }
+
+.audit-row { display: grid; grid-template-columns: 112px 128px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.2px; align-items: start; }
+.audit-row .at { font-family: var(--font-mono); color: var(--faint); font-size: 11px; }
+.audit-row .ae { font-weight: 600; }
+.audit-row .ad { color: var(--muted); margin-top: 2px; }
+.audit-row .aby { font-size: 11px; color: var(--faint); margin-top: 2px; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-size: 12.3px; font-weight: 600; cursor: pointer; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn svg { width: 14px; height: 14px; }
+.btn.copy.copied { background: var(--good-weak); border-color: var(--good); color: var(--good); }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 11px; background: var(--surface-2); border: 1px solid var(--border); padding: 3px 9px; border-radius: 20px; color: var(--muted); font-weight: 600; }
+
+.two-col-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 8px 20px; }
+
+.subhead { font-size: 10.4px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 700; margin: 2px 0 8px; }
+
+.chain { display: flex; flex-direction: column; gap: 0; }
+.chain-row { display: flex; align-items: stretch; gap: 14px; }
+.chain-rail { display: flex; flex-direction: column; align-items: center; width: 20px; flex: none; }
+.chain-rail .cdot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex: none; }
+.chain-rail .cline { flex: 1; width: 2px; background: var(--border); min-height: 14px; }
+.chain-body { flex: 1; padding-bottom: 16px; }
+.chain-label { font-size: 10.3px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 700; margin-bottom: 5px; }
+.chain-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.chain-card { border: 1px solid var(--border); border-radius: 9px; padding: 8px 11px; font-size: 12px; cursor: pointer; background: var(--surface); min-width: 150px; }
+.chain-card:hover { border-color: var(--accent); }
+.chain-card .cc-t { font-weight: 700; font-family: var(--font-mono); font-size: 12px; }
+.chain-card .cc-s { color: var(--muted); font-size: 11px; margin-top: 1px; }
+
+::selection { background: var(--accent); color: var(--accent-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+@media (max-width: 900px) {
+  #sidebar { position: fixed; left: 0; top: 0; bottom: 0; height: 100vh; transform: translateX(-100%); box-shadow: 0 0 0 100vmax rgba(0,0,0,0); }
+  #sidebar.open { transform: translateX(0); box-shadow: 20px 0 60px rgba(0,0,0,0.25); }
+  #sidebar-overlay.open { display: block; position: fixed; inset: 0; background: rgba(5,10,18,0.45); z-index: 19; }
+  #hamburger { display: flex; }
+  .detail-grid { grid-template-columns: 1fr; }
+  #breadbar { padding-left: max(16px, env(safe-area-inset-left,0px)); padding-right: max(16px, env(safe-area-inset-right,0px)); }
+  #viewport { padding-left: max(16px, env(safe-area-inset-left,0px)); padding-right: max(16px, env(safe-area-inset-right,0px)); }
+}
+
+</style>
+
+<div id="app">
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="mark">OZ</div>
+      <div>
+        <div class="name">OZONE Traceability</div>
+        <div class="sub">STS Group &middot; UI Simulator</div>
+      </div>
+    </div>
+    <nav id="sidebarnav"></nav>
+    <div class="foot"><b>Demo environment.</b> Seeded sample data only &mdash; no live ERP, SMTP or SSO connection.</div>
+  </aside>
+  <div id="main">
+    <div id="topbar">
+      <button id="hamburger" aria-label="Open menu"><span id="ham-ic-slot"></span></button>
+      <div class="searchwrap">
+        <span id="search-ic-slot" class="searchic"></span>
+        <input id="globalsearch" type="search" placeholder="Search projects, POs, equipment, documents, heat numbers&hellip;" autocomplete="off" aria-label="Global search">
+        <div id="searchdrop" hidden></div>
+      </div>
+      <div class="topbar-right">
+        <span class="pill demo">DEMO DATA</span>
+        <button class="iconbtn" id="notifbtn" aria-label="Notifications" title="Notifications">
+          <span id="notif-ic-slot"></span>
+          <span class="dot" id="notifdot" hidden></span>
+        </button>
+        <div id="identityslot"></div>
+      </div>
+    </div>
+    <div id="breadbar"><div class="breadcrumb" id="breadcrumb"></div></div>
+    <div id="viewport"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================================
+// OZONE Manufacturing & Traceability Platform — Demo Data Generator
+// Pure data-layer (no DOM). Tested standalone with Node, then inlined into
+// the artifact's <script> tag verbatim.
+// ============================================================================
+
+// ---------- RNG ----------
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rng = mulberry32(20261020);
+const rf = () => rng();
+const ri = (min, max) => Math.floor(rf() * (max - min + 1)) + min;
+const pick = (arr) => arr[Math.floor(rf() * arr.length)];
+const pickN = (arr, n) => { const a = arr.slice(); const out = []; for (let i = 0; i < n && a.length; i++) { out.push(a.splice(Math.floor(rf() * a.length), 1)[0]); } return out; };
+const pad = (n, w) => String(n).padStart(w, '0');
+const chance = (p) => rf() < p;
+
+// ---------- Date helpers ----------
+const DAY = 86400000;
+const NOW = Date.UTC(2026, 9, 20, 10, 0, 0); // 20 Oct 2026, 10:00 "Muscat"
+function addDays(ts, n) { return ts + n * DAY; }
+function addHours(ts, n) { return ts + n * 3600000; }
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function dstr(ts) { const d = new Date(ts); return `${pad(d.getUTCDate(),2)} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; }
+function dtstr(ts) { const d = new Date(ts); return `${dstr(ts)}, ${pad(d.getUTCHours(),2)}:${pad(d.getUTCMinutes(),2)}`; }
+function monthKey(ts) { const d = new Date(ts); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1,2)}`; }
+function monthLabel(ts) { const d = new Date(ts); return `${MONTHS[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`; }
+
+// ---------- Audit log ----------
+const AUDIT_LOG = [];
+let auditSeq = 1;
+function logAudit(entityType, entityId, entityLabel, action, actorId, ts, details, prev, next) {
+  AUDIT_LOG.push({
+    id: 'AUD-' + pad(auditSeq++, 6),
+    entityType, entityId, entityLabel, action,
+    actor: actorId, ts, details: details || '',
+    prev: prev || null, next: next || null
+  });
+}
+
+// ---------- Reference data ----------
+const USERS = [
+  { id: 'U01', name: 'Rashid Al Harthy', role: 'Project Manager', dept: 'Projects' },
+  { id: 'U02', name: 'Priya Nair', role: 'Document Controller', dept: 'Engineering' },
+  { id: 'U03', name: 'Faisal Al Balushi', role: 'Production Supervisor', dept: 'Production' },
+  { id: 'U04', name: 'Arjun Menon', role: 'QA/QC Inspector', dept: 'Quality' },
+  { id: 'U05', name: 'Khalid Al Amri', role: 'Procurement Manager', dept: 'Procurement' },
+  { id: 'U06', name: 'Sunil Kumar', role: 'Material Controller', dept: 'Warehouse' },
+  { id: 'U07', name: 'Mariam Al Siyabi', role: 'Quality Manager', dept: 'Quality' },
+  { id: 'U08', name: 'Thomas George', role: 'Engineering Approver', dept: 'Engineering' },
+  { id: 'U09', name: 'Yousuf Al Rawahi', role: 'Dispatch Coordinator', dept: 'Logistics' },
+  { id: 'U10', name: 'Deepak Shetty', role: 'Production Planner', dept: 'Production' },
+  { id: 'U11', name: 'Habiba Al Lawati', role: 'Engineering Reviewer', dept: 'Engineering' },
+  { id: 'U12', name: 'Noor Al Hinai', role: 'Procurement Officer', dept: 'Procurement' },
+  { id: 'U13', name: 'Vikram Pillai', role: 'Production Supervisor', dept: 'Production' },
+  { id: 'U14', name: 'Salim Al Maskari', role: 'System Administrator', dept: 'IT' },
+  { id: 'U15', name: 'Aisha Al Zadjali', role: 'Commercial / Finance Viewer', dept: 'Commercial' },
+];
+const userById = Object.fromEntries(USERS.map(u => [u.id, u]));
+function userName(id) { return userById[id] ? userById[id].name : id; }
+
+const ROLE_CATALOG = [
+  { role: 'System Administrator', desc: 'Full configuration access; manages users, roles, numbering and environment settings.' },
+  { role: 'Executive Viewer', desc: 'Read-only access to dashboards and reports across all projects.' },
+  { role: 'Project Manager', desc: 'Owns assigned projects; approves commercial milestones within authority.' },
+  { role: 'Project Planner', desc: 'Maintains project schedules and milestone baselines.' },
+  { role: 'Procurement Officer', desc: 'Raises and tracks procurement requisitions and POs.' },
+  { role: 'Procurement Manager', desc: 'Approves procurement POs and supplier commitments.' },
+  { role: 'Document Controller', desc: 'Manages document register, revisions and transmittals.' },
+  { role: 'Engineering Reviewer', desc: 'Performs internal technical review of documents.' },
+  { role: 'Engineering Approver', desc: 'Grants final engineering approval for submission.' },
+  { role: 'Production Planner', desc: 'Builds manufacturing routes and work orders.' },
+  { role: 'Production Supervisor', desc: 'Records operation start/finish and workshop progress.' },
+  { role: 'Material Controller', desc: 'Manages goods receipt, storage and material issue.' },
+  { role: 'QA/QC Inspector', desc: 'Executes inspections and records results.' },
+  { role: 'Quality Manager', desc: 'Approves quality release and NCR disposition.' },
+  { role: 'Dispatch Coordinator', desc: 'Authorizes packing, dispatch and delivery acknowledgement.' },
+  { role: 'Commercial / Finance Viewer', desc: 'Read-only access to commercial values, scoped by authorization.' },
+  { role: 'Auditor', desc: 'Read-only access to audit trail and full record history.' },
+  { role: 'Read-Only User', desc: 'General read-only access scoped by project and facility.' },
+];
+
+const CUSTOMERS = [
+  { id: 'CUS-01', name: 'Gulf Hydrocarbon Processing Co.', short: 'GHPC' },
+  { id: 'CUS-02', name: 'Duqm Refinery & Petrochemical Industries', short: 'DRPI' },
+  { id: 'CUS-03', name: 'Salalah Gas Processing LLC', short: 'SGPL' },
+  { id: 'CUS-04', name: 'Sohar Metals Industries', short: 'SMI' },
+  { id: 'CUS-05', name: 'Musandam Energy Partners', short: 'MEP' },
+];
+const custById = Object.fromEntries(CUSTOMERS.map(c => [c.id, c]));
+
+const SUPPLIERS = [
+  { id: 'SUP-01', name: 'Gulf Steel Supply LLC' },
+  { id: 'SUP-02', name: 'Al Bustan Alloys Trading' },
+  { id: 'SUP-03', name: 'Oman Fasteners & Flanges Co.' },
+  { id: 'SUP-04', name: 'Precision Forgings International' },
+  { id: 'SUP-05', name: 'Al Khaleej NDT Services' },
+  { id: 'SUP-06', name: 'Coastal Welding Consumables' },
+  { id: 'SUP-07', name: 'Sultanate Valve & Fittings' },
+  { id: 'SUP-08', name: 'Bahwan Engineering Materials' },
+];
+const supById = Object.fromEntries(SUPPLIERS.map(s => [s.id, s]));
+
+const FACILITIES = ['STS Sohar Fabrication Yard', 'STS Nizwa Workshop', 'STS Duqm Facility'];
+
+const DOC_TYPES = [
+  'Engineering Drawing', 'General Arrangement Drawing', 'Fabrication Drawing', 'Datasheet',
+  'Design Calculation', 'Material Requisition', 'Inspection & Test Plan', 'Welding Procedure Specification',
+  'Procedure Qualification Record', 'Welder Qualification Record', 'Weld Map / Weld Log',
+  'Material Test Certificate', 'Inspection Report', 'NDT Report', 'Heat Treatment Record',
+  'Pressure Test Report', 'Dimensional Inspection Report', 'Painting & Coating Report',
+  'Final Manufacturing Record Book', 'Certificate of Conformity', 'Packing List', 'Delivery Document',
+  'Handover Dossier',
+];
+const DOC_DISCIPLINE = {
+  'Engineering Drawing': 'ME', 'General Arrangement Drawing': 'ME', 'Fabrication Drawing': 'ME',
+  'Datasheet': 'ME', 'Design Calculation': 'ME', 'Material Requisition': 'MT',
+  'Inspection & Test Plan': 'QA', 'Welding Procedure Specification': 'WD', 'Procedure Qualification Record': 'WD',
+  'Welder Qualification Record': 'WD', 'Weld Map / Weld Log': 'WD', 'Material Test Certificate': 'MT',
+  'Inspection Report': 'QA', 'NDT Report': 'QA', 'Heat Treatment Record': 'QA', 'Pressure Test Report': 'QA',
+  'Dimensional Inspection Report': 'QA', 'Painting & Coating Report': 'QA',
+  'Final Manufacturing Record Book': 'DO', 'Certificate of Conformity': 'DO', 'Packing List': 'LG',
+  'Delivery Document': 'LG', 'Handover Dossier': 'DO',
+};
+
+const STAGE_DEFS = [
+  'Customer PO Received', 'PO Line Reviewed & Released', 'Engineering Documents Approved',
+  'Material Procurement Initiated', 'Material Received & Identified', 'Material Certificates Verified',
+  'Material Released for Production', 'Cutting Completed', 'Forming Completed', 'Fit-up Completed',
+  'Welding Completed', 'Heat Treatment Completed', 'NDT & Inspections Completed',
+  'Dimensional Inspection Completed', 'Pressure Testing Completed', 'Final Inspection & Documentation Completed',
+  'Quality Release Granted', 'Packing & Preservation Completed', 'Dispatch Approved',
+  'Shipment Dispatched', 'Delivery Acknowledgement Recorded', 'Manufacturing Dossier & Handover Completed',
+];
+const STAGE_PHASE = (idx) => idx <= 2 ? 'Planning & Engineering' : idx <= 6 ? 'Material' : idx <= 10 ? 'Fabrication'
+  : idx <= 15 ? 'Testing & QA' : 'Completion & Dispatch';
+
+const DOSSIER_REQUIREMENTS = [
+  'Engineering Drawing', 'Material Test Certificate', 'Welding Procedure Specification',
+  'NDT Report', 'Heat Treatment Record', 'Dimensional Inspection Report',
+  'Inspection Report', 'Certificate of Conformity', 'Packing List',
+];
+
+// ---------- Projects ----------
+const PROJECTS = [
+  {
+    id: 'PRJ-01', code: 'GHPC-SEP3', name: 'GOSP-3 Separator Package',
+    customerId: 'CUS-01', custRef: 'GHPC/CAP/2025/0118',
+    facility: FACILITIES[0], pm: 'U01', status: 'Active', priority: 'High',
+    start: Date.UTC(2025, 2, 1), contractEnd: Date.UTC(2026, 10, 30),
+    desc: 'Three-phase production separators and associated vessels for the GOSP-3 capacity debottlenecking project.',
+    specs: ['ASME VIII Div. 1', 'API 12J', 'NACE MR0175'],
+  },
+  {
+    id: 'PRJ-02', code: 'DRPI-HX09', name: 'Duqm Refinery Heat Exchanger Replacement',
+    customerId: 'CUS-02', custRef: 'DRPI/PROC/2025/0276',
+    facility: FACILITIES[2], pm: 'U01', status: 'Active', priority: 'Critical',
+    start: Date.UTC(2025, 5, 15), contractEnd: Date.UTC(2026, 8, 15),
+    desc: 'Replacement shell-and-tube heat exchangers for the crude distillation unit revamp.',
+    specs: ['ASME VIII Div. 1', 'TEMA Class R', 'ASME IX'],
+  },
+  {
+    id: 'PRJ-03', code: 'SGPL-SKD4', name: 'Salalah LPG Process Skid Package',
+    customerId: 'CUS-03', custRef: 'SGPL/EPC/2025/0042',
+    facility: FACILITIES[0], pm: 'U13', status: 'Active', priority: 'Medium',
+    start: Date.UTC(2025, 8, 1), contractEnd: Date.UTC(2027, 1, 28),
+    desc: 'Skid-mounted LPG metering and filtration packages for the Salalah terminal expansion.',
+    specs: ['ASME B31.3', 'IEC 60079 (Zone 1)'],
+  },
+  {
+    id: 'PRJ-04', code: 'SMI-SPL7', name: 'Piping Spool Fabrication — Phase 1',
+    customerId: 'CUS-04', custRef: 'SMI/MRO/2024/0391',
+    facility: FACILITIES[1], pm: 'U13', status: 'Closed', priority: 'Medium',
+    start: Date.UTC(2025, 0, 10), contractEnd: Date.UTC(2026, 7, 31), actualEnd: Date.UTC(2026, 7, 20),
+    desc: 'Carbon steel and stainless piping spool fabrication for the smelter utility piping upgrade.',
+    specs: ['ASME B31.3', 'ASME IX'],
+  },
+  {
+    id: 'PRJ-05', code: 'MEP-HRSG2', name: 'Musandam LNG HRSG Module',
+    customerId: 'CUS-05', custRef: 'MEP/CNT/2026/0009',
+    facility: FACILITIES[2], pm: 'U01', status: 'On Hold', priority: 'High', holdReason: 'Customer design freeze pending final heat-balance confirmation.',
+    start: Date.UTC(2026, 0, 5), contractEnd: Date.UTC(2027, 5, 30),
+    desc: 'Heat recovery steam generator module for the Musandam LNG cogeneration upgrade.',
+    specs: ['ASME I', 'ASME IX'],
+  },
+];
+const projById = Object.fromEntries(PROJECTS.map(p => [p.id, p]));
+for (const p of PROJECTS) {
+  logAudit('Project', p.id, p.name, 'Project created', p.pm, p.start, `Status set to Draft.`);
+  logAudit('Project', p.id, p.name, 'Status changed', p.pm, addDays(p.start, 2), `Draft → Planning.`, 'Draft', 'Planning');
+  logAudit('Project', p.id, p.name, 'Status changed', p.pm, addDays(p.start, 9), `Planning → Active.`, 'Planning', 'Active');
+  if (p.status === 'On Hold') logAudit('Project', p.id, p.name, 'Status changed', 'U07', addDays(NOW, -18), p.holdReason, 'Active', 'On Hold');
+  if (p.status === 'Closed') {
+    logAudit('Project', p.id, p.name, 'Status changed', p.pm, p.actualEnd, 'Active → Completed. Final dossier accepted by customer.', 'Active', 'Completed');
+    logAudit('Project', p.id, p.name, 'Status changed', p.pm, addDays(p.actualEnd, 5), 'Completed → Closed. Commercial closure confirmed.', 'Completed', 'Closed');
+  }
+}
+
+// ---------- Equipment catalogue per project ----------
+const EQUIP_CATALOGUE = {
+  'PRJ-01': [
+    { tag: 'V-101', cat: 'Pressure Vessel', desc: 'Three-Phase Production Separator', grade: 'SA-516 Gr.70', qty: 1 },
+    { tag: 'V-102', cat: 'Pressure Vessel', desc: 'Three-Phase Production Separator', grade: 'SA-516 Gr.70', qty: 1 },
+    { tag: 'S-201', cat: 'Separator', desc: 'Test Separator', grade: 'SA-516 Gr.70 Clad', qty: 1 },
+    { tag: 'V-103', cat: 'Pressure Vessel', desc: 'Flare Knock-Out Drum', grade: 'SA-516 Gr.70', qty: 1 },
+  ],
+  'PRJ-02': [
+    { tag: 'E-201A', cat: 'Shell & Tube Heat Exchanger', desc: 'Crude Preheat Exchanger', grade: 'SA-516 Gr.70 / SA-213 TP316', qty: 1 },
+    { tag: 'E-201B', cat: 'Shell & Tube Heat Exchanger', desc: 'Crude Preheat Exchanger', grade: 'SA-516 Gr.70 / SA-213 TP316', qty: 1 },
+    { tag: 'E-202', cat: 'Shell & Tube Heat Exchanger', desc: 'Overhead Condenser', grade: 'SA-516 Gr.70 / SA-213 TP304', qty: 1 },
+  ],
+  'PRJ-03': [
+    { tag: 'SK-401', cat: 'Process Skid', desc: 'LPG Metering & Filtration Skid', grade: 'SA-106 Gr.B (piping)', qty: 1 },
+    { tag: 'SK-402', cat: 'Process Skid', desc: 'LPG Metering & Filtration Skid', grade: 'SA-106 Gr.B (piping)', qty: 1 },
+  ],
+  'PRJ-04': [
+    { tag: 'SP-5001', cat: 'Piping Spool', desc: 'Utility Water Header Spool', grade: 'A106 Gr.B', qty: 3 },
+    { tag: 'SP-5020', cat: 'Piping Spool', desc: 'Compressed Air Header Spool', grade: 'A106 Gr.B', qty: 3 },
+    { tag: 'SP-5040', cat: 'Piping Spool', desc: 'Nitrogen Distribution Spool', grade: 'A312 TP316L', qty: 2 },
+    { tag: 'SP-5060', cat: 'Piping Spool', desc: 'Firewater Ring Main Spool', grade: 'A106 Gr.B', qty: 2 },
+  ],
+  'PRJ-05': [
+    { tag: 'H-601', cat: 'HRSG Module', desc: 'Evaporator Module', grade: 'SA-210 Gr.C', qty: 1 },
+    { tag: 'H-602', cat: 'HRSG Module', desc: 'Economizer Module', grade: 'SA-210 Gr.C', qty: 1 },
+  ],
+};
+
+// ---------- Customer POs, Lines, Equipment ----------
+const CUSTOMER_POS = [];
+const PROCUREMENT_POS = [];
+const EQUIPMENT = [];
+const DOCUMENTS = [];
+const TRANSMITTALS = [];
+const MATERIAL_BATCHES = [];
+const INSPECTIONS = [];
+const NCRS = [];
+const DISPATCH_RECORDS = [];
+
+let cpoSeq = 1, ppoSeq = 1, eqSeq = 1, docSeq = 1, matSeq = 1, inspSeq = 1, ncrSeq = 1, dispSeq = 1, transSeq = 1;
+
+function newEquipmentId() { return 'EQ-' + pad(eqSeq++, 5); }
+function newDocId() { return 'DOC-' + pad(docSeq++, 5); }
+function newMatId() { return 'MAT-' + pad(matSeq++, 5); }
+function newInspId() { return 'INSP-' + pad(inspSeq++, 5); }
+function newNcrId() { return 'NCR-' + pad(ncrSeq++, 4); }
+function newDispId() { return 'DSP-' + pad(dispSeq++, 4); }
+function newTransId(code) { return `TRN-${code}-${pad(transSeq++, 4)}`; }
+
+// Forced demo scenarios: assign outcome per equipment deterministically so the
+// acceptance-criteria style scenarios in the brief are always represented.
+const FORCED_OUTCOMES = {}; // filled below once tags are known
+
+function buildStageTimeline(startTs, outcome, category) {
+  const stages = STAGE_DEFS.map((name, idx) => ({ idx, name, status: 'pending', date: null, actor: null, note: null }));
+  const skipPressureTest = category === 'Piping Spool' && chance(0.5);
+  let doneThrough; // inclusive index of last fully done stage
+  let blockedAt = null, blockedReason = null;
+  let cursor = startTs;
+
+  const actorsCycle = ['U03', 'U13', 'U10', 'U04', 'U02', 'U06', 'U09'];
+  function stepDate(days) { cursor = addDays(cursor, days); return cursor; }
+
+  switch (outcome) {
+    case 'complete': doneThrough = 21; break;
+    case 'awaiting-dispatch': doneThrough = 16; break;
+    case 'blocked-approval': doneThrough = 1; blockedAt = 2; blockedReason = 'Engineering drawing under Revise & Resubmit — welding cannot start until Rev B is approved.'; break;
+    case 'material-shortage': doneThrough = 3; blockedAt = 4; blockedReason = 'Supplier delivery of SA-516 Gr.70 plate overdue — production on hold pending goods receipt.'; break;
+    case 'ncr-hold': doneThrough = 11; blockedAt = 12; blockedReason = 'NDT indication under disposition review — item on quality hold pending NCR closure.'; break;
+    default: doneThrough = Math.min(20, Math.max(2, Math.round(rf() * 20)));
+  }
+
+  for (let i = 0; i < stages.length; i++) {
+    if (skipPressureTest && i === 14) {
+      stages[i].status = 'skipped';
+      stages[i].note = 'Not applicable — piping spool qualified by pneumatic leak test recorded under NDT & Inspections Completed.';
+      stages[i].actor = 'U04';
+      continue;
+    }
+    if (i <= doneThrough) {
+      stages[i].status = 'done';
+      stepDate(ri(1, 6));
+      stages[i].date = cursor;
+      stages[i].actor = pick(actorsCycle);
+    } else if (blockedAt === i) {
+      stages[i].status = 'blocked';
+      stages[i].note = blockedReason;
+      stages[i].actor = pick(actorsCycle);
+    }
+  }
+  if (!blockedAt && doneThrough < 21) {
+    stages[Math.min(doneThrough + 1, 21)].status = 'current';
+  }
+  const lastDoneDate = stages.filter(s => s.date).map(s => s.date).pop() || startTs;
+  return { stages, doneThrough, blockedAt, lastDoneDate, skipPressureTest };
+}
+
+function qrPattern(seedStr) {
+  // Deterministic 11x11 pixel pattern (demo only — not a scannable code)
+  let h = 0; for (let i = 0; i < seedStr.length; i++) h = (h * 31 + seedStr.charCodeAt(i)) >>> 0;
+  const localRng = mulberry32(h);
+  const cells = [];
+  for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) {
+    const corner = (x < 3 && y < 3) || (x > 7 && y < 3) || (x < 3 && y > 7);
+    cells.push(corner ? 1 : (localRng() < 0.46 ? 1 : 0));
+  }
+  return cells;
+}
+
+let projectIndex = 0;
+for (const proj of PROJECTS) {
+  const cust = custById[proj.customerId];
+  const nLines = EQUIP_CATALOGUE[proj.id].length;
+  const poCount = proj.id === 'PRJ-04' ? 2 : 1;
+  const linesPerPo = Math.ceil(nLines / poCount);
+  const catalogue = EQUIP_CATALOGUE[proj.id];
+
+  for (let poIdx = 0; poIdx < poCount; poIdx++) {
+    const poLinesCat = catalogue.slice(poIdx * linesPerPo, (poIdx + 1) * linesPerPo);
+    if (!poLinesCat.length) continue;
+    const poId = 'CPO-' + pad(cpoSeq++, 5);
+    const issue = addDays(proj.start, ri(5, 20));
+    const poNumber = `PO-${cust.short}-${new Date(issue).getUTCFullYear()}-${pad(ri(10, 99), 4)}`;
+    const delivery = proj.status === 'Closed' ? proj.actualEnd : proj.contractEnd;
+    let totalValue = 0;
+    const lines = [];
+    let lineNo = 1;
+    for (const item of poLinesCat) {
+      const unitPrice = ri(8, 60) * 1000 + ri(0, 999);
+      const lineValue = unitPrice * item.qty;
+      totalValue += lineValue;
+      const eqIds = [];
+      for (let q = 0; q < item.qty; q++) {
+        const eqId = newEquipmentId();
+        eqIds.push(eqId);
+      }
+      lines.push({
+        poId, lineNo: lineNo++, tag: item.tag, desc: item.desc, category: item.cat,
+        qty: item.qty, unit: 'EA', unitPrice, lineValue,
+        drawingRef: `STS-${proj.code}-${DOC_DISCIPLINE['Engineering Drawing']}-${pad(lineNo, 4)}`,
+        requiredDate: delivery, facility: proj.facility, equipmentIds: eqIds,
+        dispatchQty: 0,
+      });
+    }
+    const amendments = chance(0.35) ? [{
+      ref: `AMD-${poId}-01`, date: addDays(issue, ri(60, 140)),
+      field: 'Quantity & Value', from: `OMR ${(totalValue * 0.85).toFixed(3)}`, to: `OMR ${totalValue.toFixed(3)}`,
+      reason: 'Customer-approved scope addition.', by: 'U01', approvedBy: userName('U07'),
+    }] : [];
+
+    const poStatus = proj.status === 'Closed' ? 'Closed' : proj.status === 'On Hold' ? 'Accepted / Released' : pick(['In Execution', 'In Execution', 'Partially Delivered']);
+    const cpo = {
+      id: poId, poNumber, customerId: proj.customerId, projectId: proj.id,
+      issueDate: issue, receiptDate: addDays(issue, 1), contractDeliveryDate: delivery,
+      currency: 'OMR', value: totalValue, amendments, pm: proj.pm, status: poStatus,
+      lines,
+    };
+    CUSTOMER_POS.push(cpo);
+    logAudit('Customer PO', poId, poNumber, 'PO received', proj.pm, issue, `Received from ${cust.name}.`);
+    logAudit('Customer PO', poId, poNumber, 'Status changed', proj.pm, addDays(issue, 2), 'Received → Reviewed.', 'Received', 'Reviewed');
+    logAudit('Customer PO', poId, poNumber, 'Status changed', proj.pm, addDays(issue, 5), 'Reviewed → Accepted/Released.', 'Reviewed', 'Accepted/Released');
+    for (const a of amendments) {
+      logAudit('Customer PO', poId, poNumber, 'Amendment approved', a.by, a.date, `${a.field}: ${a.from} → ${a.to}. ${a.reason}`, a.from, a.to);
+    }
+  }
+}
+
+// Build equipment records from PO lines, plus their docs, materials, inspections
+let eqGlobalIndex = 0;
+const forcedSequence = ['blocked-approval', 'material-shortage', 'ncr-hold', 'awaiting-dispatch', 'complete'];
+for (const cpo of CUSTOMER_POS) {
+  const proj = projById[cpo.projectId];
+  for (const line of cpo.lines) {
+    for (const eqId of line.equipmentIds) {
+      eqGlobalIndex++;
+      let outcome;
+      if (proj.status === 'Closed') outcome = 'complete';
+      else if (proj.status === 'On Hold') outcome = 'blocked-approval';
+      else if (eqGlobalIndex <= forcedSequence.length) outcome = forcedSequence[eqGlobalIndex - 1];
+      else outcome = 'normal';
+
+      // Equipment demonstrating a *current* blocker gets a recent start date
+      // (a few weeks ago) so the hold reads as live, not an 18-month-old stall.
+      const isCurrentBlocker = outcome === 'blocked-approval' || outcome === 'material-shortage' || outcome === 'ncr-hold';
+      const startTs = isCurrentBlocker ? addDays(NOW, -ri(60, 110)) : addDays(cpo.issueDate, ri(3, 10));
+      const tl = buildStageTimeline(startTs, outcome, line.category);
+      const serial = `STS/${new Date(startTs).getUTCFullYear()}/${pad(eqGlobalIndex, 4)}`;
+      const qualityHold = tl.blockedAt !== null && outcome === 'ncr-hold';
+      const dispatchStatus = outcome === 'complete' ? 'Delivered'
+        : (tl.doneThrough >= 19) ? 'Dispatched'
+        : (tl.doneThrough >= 16) ? 'Ready for Dispatch' : 'Not Ready';
+
+      const eq = {
+        id: eqId, projectId: proj.id, poId: cpo.id, lineNo: line.lineNo, tag: line.tag + (line.qty > 1 ? `-${pad(line.equipmentIds.indexOf(eqId) + 1, 2)}` : ''),
+        serial, desc: line.desc, category: line.category, drawingRef: line.drawingRef, drawingRev: pick(['A', 'B', 'C']),
+        material: null, facility: line.facility,
+        plannedStart: startTs, plannedFinish: addDays(startTs, 90),
+        actualStart: startTs, actualFinish: tl.doneThrough >= 21 ? tl.lastDoneDate : null,
+        owner: pick(['U03', 'U13', 'U10']),
+        stages: tl.stages, currentStageIdx: tl.blockedAt !== null ? tl.blockedAt : Math.min(tl.doneThrough + 1, 21),
+        qualityHold, dispatchStatus,
+        plannedDispatch: addDays(line.requiredDate, -7),
+        actualDispatch: dispatchStatus === 'Dispatched' || dispatchStatus === 'Delivered' ? tl.lastDoneDate : null,
+        outcome,
+      };
+      EQUIPMENT.push(eq);
+      logAudit('Equipment', eqId, eq.tag, 'Equipment record created', 'U01', startTs, `Linked to ${cpo.poNumber} line ${line.lineNo}.`);
+      for (const s of tl.stages) {
+        if (s.status === 'done') logAudit('Equipment', eqId, eq.tag, `Stage completed: ${s.name}`, s.actor, s.date, s.note || '');
+        if (s.status === 'blocked') logAudit('Equipment', eqId, eq.tag, `Stage blocked: ${s.name}`, s.actor, NOW - DAY * ri(1, 10), s.note || '');
+        if (s.status === 'skipped') logAudit('Equipment', eqId, eq.tag, `Stage skipped: ${s.name}`, s.actor, addDays(startTs, 40), s.note || '');
+      }
+
+      // ---- Documents for this equipment ----
+      const docPool = ['Engineering Drawing', 'Material Test Certificate', 'Welding Procedure Specification', 'NDT Report', 'Dimensional Inspection Report'];
+      const docCount = ri(2, 3);
+      const chosenDocs = pickN(docPool, docCount);
+      const linkedDocIds = [];
+      for (const dtName of chosenDocs) {
+        const docId = newDocId();
+        const disc = DOC_DISCIPLINE[dtName];
+        const docNumber = `STS-${proj.code}-${disc}-${pad(docSeq, 4)}`;
+        // Pick a terminal path so the register shows the full range of document
+        // states, not only fully-approved documents.
+        const roll = rf();
+        const path = outcome === 'blocked-approval' && dtName === 'Engineering Drawing' ? 'pending-resubmit'
+          : roll < 0.52 ? 'approved'
+          : roll < 0.68 ? 'rejected-then-approved'
+          : roll < 0.80 ? 'pending-resubmit'
+          : roll < 0.90 ? 'under-review'
+          : 'in-review';
+        let revCode = 'A';
+        const history = [];
+        let t = addDays(startTs, ri(-10, 10));
+        const originator = pick(['U02', 'U08', 'U11']);
+        history.push({ event: 'Revision created', rev: revCode, from: null, to: 'Draft', actor: originator, ts: t });
+        t = addDays(t, ri(1, 3));
+        history.push({ event: 'Internal review', rev: revCode, from: 'Draft', to: 'Internal Review', actor: 'U11', ts: t });
+        let finalStatus = 'Internal Review';
+        let dueDate = addDays(t, ri(7, 14));
+        if (path !== 'in-review') {
+          t = addDays(t, ri(1, 2));
+          history.push({ event: 'Approved for submission', rev: revCode, from: 'Internal Review', to: 'Approved for Submission', actor: 'U08', ts: t });
+          t = addDays(t, 1);
+          const transId = newTransId(proj.code);
+          history.push({ event: 'Submitted via transmittal', rev: revCode, from: 'Approved for Submission', to: 'Submitted', actor: 'U02', ts: t, transmittal: transId });
+          finalStatus = 'Submitted';
+          dueDate = addDays(t, 14);
+          if (path !== 'under-review') {
+            t = addDays(t, ri(5, 12));
+            if (path === 'approved') {
+              history.push({ event: 'Customer review', rev: revCode, from: 'Submitted', to: 'Approved', actor: 'U08', ts: t });
+              finalStatus = 'Approved';
+            } else {
+              history.push({ event: 'Customer review', rev: revCode, from: 'Submitted', to: 'Revise & Resubmit', actor: 'U08', ts: t, comment: 'Dimensional tolerance callout requires clarification on Detail C.' });
+              finalStatus = 'Revise & Resubmit';
+              dueDate = addDays(t, 10);
+              if (path === 'rejected-then-approved') {
+                revCode = 'B';
+                t = addDays(t, ri(3, 6));
+                history.push({ event: 'Revision created', rev: revCode, from: 'Revise & Resubmit', to: 'Draft', actor: originator, ts: t, comment: 'Superseding Rev A per customer comment.' });
+                t = addDays(t, 2);
+                history.push({ event: 'Internal review', rev: revCode, from: 'Draft', to: 'Internal Review', actor: 'U11', ts: t });
+                t = addDays(t, 1);
+                history.push({ event: 'Approved for submission', rev: revCode, from: 'Internal Review', to: 'Approved for Submission', actor: 'U08', ts: t });
+                t = addDays(t, 1);
+                const transId2 = newTransId(proj.code);
+                history.push({ event: 'Resubmitted via transmittal', rev: revCode, from: 'Approved for Submission', to: 'Submitted', actor: 'U02', ts: t, transmittal: transId2 });
+                t = addDays(t, ri(4, 9));
+                history.push({ event: 'Customer review', rev: revCode, from: 'Submitted', to: 'Approved', actor: 'U08', ts: t });
+                finalStatus = 'Approved';
+                dueDate = addDays(t, 14);
+              }
+            }
+          }
+        }
+        const doc = {
+          id: docId, docNumber, title: `${dtName} — ${eq.tag}`, type: dtName, projectId: proj.id,
+          poId: cpo.id, lineNo: line.lineNo, equipmentId: eqId, originator, controller: 'U02',
+          revision: revCode, status: finalStatus, history,
+          dueDate, confidentiality: 'Internal — Controlled',
+        };
+        DOCUMENTS.push(doc);
+        linkedDocIds.push(docId);
+        for (const h of history) {
+          logAudit('Document', docId, docNumber, h.event, h.actor, h.ts, h.comment || (h.transmittal ? `Transmittal ${h.transmittal}` : ''), h.from, h.to);
+        }
+      }
+      eq.documentIds = linkedDocIds;
+
+      // ---- Material batch + genealogy ----
+      if (tl.doneThrough >= 4) {
+        const matId = newMatId();
+        const heat = 'HT' + ri(400000, 499999);
+        const batchNo = 'B-' + ri(2000, 9999);
+        const supplier = pick(SUPPLIERS);
+        const certOk = chance(0.85);
+        const recvDate = addDays(startTs, ri(5, 12));
+        const qty = ri(2, 12);
+        const batch = {
+          id: matId, heat, batchNo, grade: line.material || catalogueGrade(line), supplier: supplier.id,
+          projectId: proj.id, poId: null, receivedDate: recvDate, qtyReceived: qty, qtyConsumed: qty,
+          qtyRemaining: 0, certStatus: certOk ? 'Verified' : 'Pending Verification', storageLocation: `${proj.facility.split(' ')[1] || 'Yard'} — Rack ${ri(1,9)}${pick(['A','B','C'])}`,
+          usage: [{ equipmentId: eqId, qty, weldRef: `W-${pad(eqGlobalIndex,3)}-${ri(1,9)}` }],
+        };
+        MATERIAL_BATCHES.push(batch);
+        logAudit('Material Batch', matId, `Heat ${heat}`, 'Goods received', 'U06', recvDate, `${qty} units from ${supplier.name}.`);
+        if (certOk) logAudit('Material Batch', matId, `Heat ${heat}`, 'Material certificate verified', 'U06', addDays(recvDate, 1), `MTC verified against ${line.material || catalogueGrade(line)} specification.`);
+        logAudit('Material Batch', matId, `Heat ${heat}`, 'Issued to production', 'U06', addDays(recvDate, 2), `${qty} units issued against ${eq.tag}.`);
+        eq.materialBatchIds = [matId];
+      } else {
+        eq.materialBatchIds = [];
+      }
+
+      // ---- Inspections ----
+      const inspTypes = [];
+      if (tl.doneThrough >= 10) inspTypes.push('Welding Inspection');
+      if (tl.doneThrough >= 12 || outcome === 'ncr-hold') inspTypes.push('NDT — Radiographic');
+      if (tl.doneThrough >= 13) inspTypes.push('Dimensional Inspection');
+      if (tl.doneThrough >= 15 && !tl.skipPressureTest) inspTypes.push('Hydrostatic Pressure Test');
+      if (tl.doneThrough >= 16) inspTypes.push('Final Inspection');
+      const inspStageIdx = { 'Welding Inspection': 10, 'NDT — Radiographic': 12, 'Dimensional Inspection': 13, 'Hydrostatic Pressure Test': 14, 'Final Inspection': 15 };
+      const inspIds = [];
+      for (const itype of inspTypes) {
+        const forcedFail = outcome === 'ncr-hold' && itype === 'NDT — Radiographic';
+        const result = forcedFail ? 'Fail' : (chance(0.92) ? 'Pass' : 'Fail');
+        const iid = newInspId();
+        // Anchor the inspection to when its stage actually completed (or, for
+        // the stage currently blocked pending disposition, to just before now).
+        const sDate = tl.stages[inspStageIdx[itype]] && tl.stages[inspStageIdx[itype]].date;
+        const actDate = Math.min(sDate || addDays(NOW, -ri(5, 15)), addDays(NOW, -1));
+        const reqDate = addDays(actDate, -ri(1, 4));
+        const insp = {
+          id: iid, equipmentId: eqId, projectId: proj.id, type: itype,
+          acceptanceCriteria: itype.includes('NDT') ? 'ASME IX / client ITP Rev.1 acceptance limits' : itype.includes('Hydro') ? '1.5x design pressure, 30 min hold, per ITP' : 'Approved ITP acceptance criteria',
+          requestDate: reqDate, plannedDate: addDays(reqDate, 1), actualDate: actDate,
+          inspector: 'U04', witness: chance(0.4) ? 'Third-Party TPI' : null,
+          result, observations: result === 'Fail' ? 'Linear indication exceeding acceptance length at weld seam W-' + pad(eqGlobalIndex, 3) + '-2.' : 'No indications beyond acceptance criteria.',
+          ncrId: null,
+        };
+        INSPECTIONS.push(insp);
+        inspIds.push(iid);
+        logAudit('Inspection', iid, itype, 'Inspection requested', 'U03', reqDate, `Requested for ${eq.tag}.`);
+        logAudit('Inspection', iid, itype, `Inspection result: ${result}`, 'U04', actDate, insp.observations);
+      }
+      eq.inspectionIds = inspIds;
+
+      // ---- NCR ----
+      eq.ncrId = null;
+      const failedInsp = INSPECTIONS.find(i => i.equipmentId === eqId && i.result === 'Fail');
+      if (failedInsp) {
+        const ncrId = newNcrId();
+        const detect = failedInsp.actualDate;
+        const isOpen = outcome === 'ncr-hold';
+        const closeTarget = addDays(detect, 21);
+        const ncr = {
+          id: ncrId, projectId: proj.id, equipmentId: eqId, documentRef: null, materialRef: null,
+          description: failedInsp.observations, detectDate: detect, dept: 'Quality',
+          severity: pick(['Major', 'Minor']), status: isOpen ? 'Disposition Review' : 'Closed',
+          containment: 'Weld seam flagged and quarantined pending disposition.',
+          disposition: isOpen ? null : 'Repair by re-weld and re-NDT per approved WPS.',
+          rootCause: isOpen ? null : 'Localized porosity due to inconsistent shielding gas flow.',
+          correctiveAction: isOpen ? null : 'Gas flow meter recalibrated on welding bay 2; welder re-briefed.',
+          responsible: 'U07', targetClosure: closeTarget,
+          actualClosure: isOpen ? null : addDays(detect, ri(10, 18)),
+        };
+        NCRS.push(ncr);
+        failedInsp.ncrId = ncrId;
+        eq.ncrId = ncrId;
+        logAudit('NCR', ncrId, ncrId, 'NCR raised', 'U04', detect, ncr.description);
+        if (!isOpen) {
+          logAudit('NCR', ncrId, ncrId, 'Disposition approved', 'U07', addDays(detect, 3), ncr.disposition);
+          logAudit('NCR', ncrId, ncrId, 'Reinspection passed', 'U04', addDays(detect, ri(8,14)), 'Re-NDT clear. Item released from hold.');
+          logAudit('NCR', ncrId, ncrId, 'NCR closed', 'U07', ncr.actualClosure, 'Closure review complete.');
+        } else {
+          logAudit('NCR', ncrId, ncrId, 'Containment recorded', 'U04', addDays(detect, 1), ncr.containment);
+        }
+      }
+
+      // ---- Dispatch ----
+      if (dispatchStatus === 'Dispatched' || dispatchStatus === 'Delivered') {
+        const did = newDispId();
+        const dDate = eq.actualDispatch || tl.lastDoneDate;
+        DISPATCH_RECORDS.push({
+          id: did, equipmentId: eqId, projectId: proj.id, dispatchDate: dDate,
+          deliveryRef: `DN-${proj.code}-${pad(ri(100,999),3)}`,
+          qualityReleaseRef: 'Quality Release Granted (stage 17)',
+          status: dispatchStatus, ackDate: dispatchStatus === 'Delivered' ? addDays(dDate, ri(3,7)) : null,
+        });
+        logAudit('Dispatch', did, eq.tag, 'Dispatch authorized', 'U09', addDays(dDate,-1), 'Quality release confirmed prior to dispatch.');
+        logAudit('Dispatch', did, eq.tag, 'Shipment dispatched', 'U09', dDate, `Delivery note ${`DN-${proj.code}`} issued.`);
+        if (dispatchStatus === 'Delivered') logAudit('Dispatch', did, eq.tag, 'Delivery acknowledgement received', 'U09', addDays(dDate, ri(3,7)), 'Signed delivery note received from customer.');
+      }
+    }
+  }
+}
+function catalogueGrade(line) { return line.material || 'SA-516 Gr.70'; }
+
+// ---------- Resolve stale in-progress documents ----------
+// A live system wouldn't leave a document hanging unresolved for well over a
+// year with nobody acting on it. Anything last touched more than ~60 days
+// before "now" is carried forward to a resolved state; only documents whose
+// most recent activity is genuinely recent are left open, so the dashboard's
+// "overdue" counters reflect current work rather than historical backlog.
+const STALE_DAYS = 60;
+const currentlyBlockedEquipIds = new Set(EQUIPMENT.filter(e => e.stages.some(s => s.status === 'blocked')).map(e => e.id));
+for (const doc of DOCUMENTS) {
+  if (doc.status === 'Approved') continue;
+  if (currentlyBlockedEquipIds.has(doc.equipmentId)) continue; // keep the live blocker's own paperwork open
+  let last = doc.history[doc.history.length - 1];
+  if ((NOW - last.ts) / DAY <= STALE_DAYS) continue;
+  const before = doc.history.length;
+  let t = last.ts;
+  if (doc.status === 'Internal Review') {
+    t = addDays(t, ri(1, 2));
+    doc.history.push({ event: 'Approved for submission', rev: doc.revision, from: 'Internal Review', to: 'Approved for Submission', actor: 'U08', ts: t });
+    t = addDays(t, 1);
+    const tid = newTransId(projById[doc.projectId].code);
+    doc.history.push({ event: 'Submitted via transmittal', rev: doc.revision, from: 'Approved for Submission', to: 'Submitted', actor: 'U02', ts: t, transmittal: tid });
+    doc.status = 'Submitted';
+    t = addDays(t, ri(5, 10));
+  }
+  if (doc.status === 'Submitted') {
+    doc.history.push({ event: 'Customer review', rev: doc.revision, from: 'Submitted', to: 'Approved', actor: 'U08', ts: t });
+    doc.status = 'Approved';
+    doc.dueDate = addDays(t, 14);
+  } else if (doc.status === 'Revise & Resubmit') {
+    const rc = String.fromCharCode(doc.revision.charCodeAt(0) + 1);
+    t = addDays(t, ri(3, 6));
+    doc.history.push({ event: 'Revision created', rev: rc, from: 'Revise & Resubmit', to: 'Draft', actor: doc.originator, ts: t, comment: 'Superseding prior revision per customer comment.' });
+    t = addDays(t, 2);
+    doc.history.push({ event: 'Internal review', rev: rc, from: 'Draft', to: 'Internal Review', actor: 'U11', ts: t });
+    t = addDays(t, 1);
+    doc.history.push({ event: 'Approved for submission', rev: rc, from: 'Internal Review', to: 'Approved for Submission', actor: 'U08', ts: t });
+    t = addDays(t, 1);
+    const tid2 = newTransId(projById[doc.projectId].code);
+    doc.history.push({ event: 'Resubmitted via transmittal', rev: rc, from: 'Approved for Submission', to: 'Submitted', actor: 'U02', ts: t, transmittal: tid2 });
+    t = addDays(t, ri(4, 9));
+    doc.history.push({ event: 'Customer review', rev: rc, from: 'Submitted', to: 'Approved', actor: 'U08', ts: t });
+    doc.revision = rc;
+    doc.status = 'Approved';
+    doc.dueDate = addDays(t, 14);
+  }
+  for (let i = before; i < doc.history.length; i++) {
+    const h = doc.history[i];
+    logAudit('Document', doc.id, doc.docNumber, h.event, h.actor, h.ts, h.comment || (h.transmittal ? `Transmittal ${h.transmittal}` : ''), h.from, h.to);
+  }
+}
+
+function proj_code_for(projectId) { return projById[projectId].code; }
+
+// ---------- Procurement POs ----------
+const PROC_ITEMS = [
+  'SA-516 Gr.70 Plate', 'SA-106 Gr.B Seamless Pipe', 'A312 TP316L Pipe', 'Forged Flanges (ASME B16.5)',
+  'Welding Consumables (E7018)', 'NDT Subcontract Services', 'SA-213 TP304 Tube Bundle', 'Gaskets & Fasteners Set',
+  'Heat Treatment Subcontract', 'Coating & Painting Materials',
+];
+for (const proj of PROJECTS) {
+  const count = proj.id === 'PRJ-04' ? 5 : ri(2, 4);
+  for (let i = 0; i < count; i++) {
+    const ppoId = 'PPO-' + pad(ppoSeq++, 5);
+    const supplier = pick(SUPPLIERS);
+    const issue = addDays(proj.start, ri(10, 50));
+    const promised = addDays(issue, ri(20, 55));
+    const isLate = chance(0.3) && proj.status !== 'Closed';
+    const actual = proj.status === 'Closed' ? addDays(promised, ri(-5, 3)) : (isLate ? null : (chance(0.5) ? addDays(promised, ri(-3, 2)) : null));
+    const qty = ri(4, 40);
+    const received = actual ? qty : (chance(0.4) ? Math.round(qty * (ri(30,80)/100)) : 0);
+    const item = pick(PROC_ITEMS);
+    const unitPrice = ri(80, 900);
+    const ppoNumber = `STS-PPO-${new Date(issue).getUTCFullYear()}-${pad(ppoSeq + 1000, 5)}`;
+    const ppo = {
+      id: ppoId, poNumber: ppoNumber, supplierId: supplier.id, projectId: proj.id,
+      description: item, qty, unit: item.includes('Plate') ? 'MT' : item.includes('Pipe') || item.includes('Tube') ? 'M' : 'LOT',
+      unitPrice, currency: 'OMR', value: unitPrice * qty,
+      creationDate: issue, approvalDate: addDays(issue, 2), issueDate: addDays(issue, 3),
+      ackDate: addDays(issue, ri(4, 7)), promisedDate: promised, revisedPromisedDate: isLate ? addDays(promised, ri(5,15)) : null,
+      actualDeliveryDate: actual, qtyReceived: received, qtyBalance: qty - received,
+      certsRequired: chance(0.7), buyer: 'U05', expeditor: 'U12',
+      status: proj.status === 'Closed' ? 'Closed' : (received >= qty ? 'Material Release' : received > 0 ? 'Goods Receipt' : (isLate ? 'Supplier Acknowledgement' : 'Manufacturing/Preparation')),
+    };
+    PROCUREMENT_POS.push(ppo);
+    logAudit('Procurement PO', ppoId, ppoNumber, 'Requisition raised', 'U12', addDays(issue,-4), `${item} for ${proj.code}.`);
+    logAudit('Procurement PO', ppoId, ppoNumber, 'PO issued', 'U05', ppo.issueDate, `Issued to ${supplier.name}.`);
+    logAudit('Procurement PO', ppoId, ppoNumber, 'Supplier acknowledged', 'U12', ppo.ackDate, `Promised delivery ${dstr(promised)}.`);
+    if (isLate) logAudit('Procurement PO', ppoId, ppoNumber, 'Delivery date revised', 'U12', addDays(promised,-2), `Promised date revised to ${dstr(ppo.revisedPromisedDate)} — supplier capacity constraint.`, dstr(promised), dstr(ppo.revisedPromisedDate));
+    if (received > 0) logAudit('Procurement PO', ppoId, ppoNumber, 'Goods receipt recorded', 'U06', actual || addDays(promised, 2), `${received} of ${qty} ${ppo.unit} received.`);
+  }
+}
+
+// ---------- Resolve stale procurement POs ----------
+// An unreceived PO whose promised date is long past would have been
+// expedited or escalated by now. Keep only a small, recent set of genuinely
+// overdue POs so the supplier-performance KPIs stay realistic rather than
+// showing a year-long unresolved backlog.
+{
+  let keptOverdue = 0;
+  const KEEP_OVERDUE_MAX = 3;
+  for (const ppo of PROCUREMENT_POS) {
+    if (ppo.status === 'Closed' || ppo.actualDeliveryDate) continue;
+    const due = ppo.revisedPromisedDate || ppo.promisedDate;
+    if ((NOW - due) / DAY <= 45) continue; // not stale yet
+    if (keptOverdue < KEEP_OVERDUE_MAX && chance(0.5)) { keptOverdue++; continue; }
+    const deliveredTs = addDays(due, ri(-3, 12));
+    ppo.actualDeliveryDate = deliveredTs;
+    ppo.qtyReceived = ppo.qty;
+    ppo.qtyBalance = 0;
+    ppo.status = 'Material Release';
+    logAudit('Procurement PO', ppo.id, ppo.poNumber, 'Goods receipt recorded', 'U06', deliveredTs, `${ppo.qty} of ${ppo.qty} ${ppo.unit} received — PO closed out.`);
+    logAudit('Procurement PO', ppo.id, ppo.poNumber, 'Material released to production', 'U06', addDays(deliveredTs, 1), `Certificates verified; material released against ${proj_code_for(ppo.projectId)}.`);
+  }
+}
+
+// ---------- Transmittals (register) ----------
+// Reconstruct a transmittal register from document history events that reference a transmittal id.
+const transMap = new Map();
+for (const doc of DOCUMENTS) {
+  for (const h of doc.history) {
+    if (h.transmittal) {
+      if (!transMap.has(h.transmittal)) {
+        transMap.set(h.transmittal, {
+          id: h.transmittal, projectId: doc.projectId, sentDate: h.ts, sender: 'STS Group — OZONE Document Control',
+          recipient: custById[projById[doc.projectId].customerId].name, purpose: h.event.includes('Resubmit') ? 'Resubmission' : 'Approval',
+          docIds: [], responseDue: addDays(h.ts, 14), status: 'Pending Response',
+        });
+      }
+      transMap.get(h.transmittal).docIds.push({ docId: doc.id, rev: h.rev });
+    }
+  }
+}
+for (const doc of DOCUMENTS) {
+  for (const h of doc.history) {
+    if (h.event === 'Customer review' && h.to === 'Approved') {
+      // mark the most recent transmittal for this doc responded
+      const tIds = [...transMap.values()].filter(t => t.projectId === doc.projectId && t.docIds.some(d => d.docId === doc.id));
+      for (const t of tIds) if (h.ts > t.sentDate) { t.status = 'Response Received'; t.responseDate = h.ts; }
+    }
+  }
+}
+TRANSMITTALS.push(...transMap.values());
+
+// ---------- Indices ----------
+const EQUIPMENT_BY_ID = Object.fromEntries(EQUIPMENT.map(e => [e.id, e]));
+const DOC_BY_ID = Object.fromEntries(DOCUMENTS.map(d => [d.id, d]));
+const MAT_BY_ID = Object.fromEntries(MATERIAL_BATCHES.map(m => [m.id, m]));
+const INSP_BY_ID = Object.fromEntries(INSPECTIONS.map(i => [i.id, i]));
+const NCR_BY_ID = Object.fromEntries(NCRS.map(n => [n.id, n]));
+const DISP_BY_ID = Object.fromEntries(DISPATCH_RECORDS.map(d => [d.id, d]));
+const CPO_BY_ID = Object.fromEntries(CUSTOMER_POS.map(c => [c.id, c]));
+const PPO_BY_ID = Object.fromEntries(PROCUREMENT_POS.map(p => [p.id, p]));
+const TRANS_BY_ID = Object.fromEntries(TRANSMITTALS.map(t => [t.id, t]));
+
+AUDIT_LOG.sort((a, b) => a.ts - b.ts);
+
+// quick stats for sanity check when run under node
+if (typeof module !== 'undefined') {
+  console.log(JSON.stringify({
+    projects: PROJECTS.length, customerPOs: CUSTOMER_POS.length, procurementPOs: PROCUREMENT_POS.length,
+    equipment: EQUIPMENT.length, documents: DOCUMENTS.length, transmittals: TRANSMITTALS.length,
+    materialBatches: MATERIAL_BATCHES.length, inspections: INSPECTIONS.length, ncrs: NCRS.length,
+    dispatches: DISPATCH_RECORDS.length, auditEvents: AUDIT_LOG.length,
+  }, null, 2));
+}
+
+
+// ============================================================================
+// Derived data: KPIs, notifications, search index, chart data prep.
+// No DOM — pure functions over the datagen.js arrays. Inlined after datagen.
+// ============================================================================
+
+function isOverdue(ts) { return ts !== null && ts !== undefined && ts < NOW; }
+function daysUntil(ts) { return Math.round((ts - NOW) / DAY); }
+
+function computeKPIs() {
+  const activeProjects = PROJECTS.filter(p => p.status === 'Active').length;
+  const cpoValue = CUSTOMER_POS.reduce((s, p) => s + p.value, 0);
+  const ppoValue = PROCUREMENT_POS.reduce((s, p) => s + p.value, 0);
+  const equipInProduction = EQUIPMENT.filter(e => e.currentStageIdx > 0 && e.currentStageIdx < 21 && e.dispatchStatus !== 'Delivered').length;
+  const docsAwaiting = DOCUMENTS.filter(d => ['Internal Review', 'Submitted'].includes(d.status)).length;
+  const overdueDocs = DOCUMENTS.filter(d => !['Approved'].includes(d.status) && isOverdue(d.dueDate)).length;
+  const overdueSupplier = PROCUREMENT_POS.filter(p => p.status !== 'Closed' && p.status !== 'Material Release' && isOverdue(p.revisedPromisedDate || p.promisedDate)).length;
+  const materialShortages = PROCUREMENT_POS.filter(p => p.qtyBalance > 0 && p.status !== 'Closed').length;
+  const milestonesPlanned = PROJECTS.length * 4;
+  const milestonesActual = PROJECTS.reduce((s, p) => s + projectMilestones(p).filter(m => m.done).length, 0);
+  const inspectionsAwaiting = 0; // all generated inspections already have a recorded result in this demo
+  const finalInspections = INSPECTIONS.filter(i => i.type === 'Final Inspection');
+  const firstTimeAccept = finalInspections.length ? Math.round(100 * finalInspections.filter(i => i.result === 'Pass').length / finalInspections.length) : null;
+  const openNcrs = NCRS.filter(n => n.status !== 'Closed').length;
+  const awaitingRelease = EQUIPMENT.filter(e => e.dispatchStatus === 'Ready for Dispatch').length;
+  const readyDispatch = EQUIPMENT.filter(e => e.dispatchStatus === 'Ready for Dispatch').length;
+  const overdueMilestones = PROJECTS.filter(p => p.status !== 'Closed' && isOverdue(p.contractEnd)).length;
+  const blockedEquip = EQUIPMENT.filter(e => e.stages.some(s => s.status === 'blocked'));
+
+  return {
+    activeProjects, cpoValue, ppoValue, equipInProduction, docsAwaiting, overdueDocs, overdueSupplier,
+    materialShortages, milestonesPlanned, milestonesActual, firstTimeAccept, openNcrs, awaitingRelease,
+    readyDispatch, overdueMilestones, blockedEquip,
+  };
+}
+
+function projectMilestones(p) {
+  const eqs = EQUIPMENT.filter(e => e.projectId === p.id);
+  const docs = DOCUMENTS.filter(d => d.projectId === p.id);
+  const engDone = docs.filter(d => d.type === 'Engineering Drawing').every(d => d.status === 'Approved') && docs.some(d => d.type === 'Engineering Drawing');
+  const matDone = eqs.length > 0 && eqs.every(e => e.currentStageIdx >= 7 || e.stages[7].status === 'done');
+  const fabDone = eqs.length > 0 && eqs.every(e => e.stages[10].status === 'done' || e.currentStageIdx > 10);
+  const dispatchDone = eqs.length > 0 && eqs.every(e => e.dispatchStatus === 'Dispatched' || e.dispatchStatus === 'Delivered');
+  return [
+    { name: 'Engineering Complete', done: !!engDone, planned: addDays(p.start, 60) },
+    { name: 'Material Procurement Complete', done: !!matDone, planned: addDays(p.start, 120) },
+    { name: 'Fabrication Complete', done: !!fabDone, planned: addDays(p.start, 220) },
+    { name: 'Dispatch Complete', done: !!dispatchDone, planned: p.contractEnd },
+  ];
+}
+
+function projectProgress(p) {
+  const eqs = EQUIPMENT.filter(e => e.projectId === p.id);
+  if (!eqs.length) return 0;
+  const sum = eqs.reduce((s, e) => s + (e.currentStageIdx / 21), 0);
+  return Math.round(100 * sum / eqs.length);
+}
+
+function computeNotifications() {
+  const out = [];
+  const push = (sev, cat, text, ts, nav) => out.push({ sev, cat, text, ts, nav });
+
+  for (const d of DOCUMENTS) {
+    if (d.status !== 'Approved' && isOverdue(d.dueDate)) {
+      push('critical', 'Document overdue', `${d.docNumber} (${d.type}) is overdue for ${d.status === 'Internal Review' ? 'internal review' : d.status === 'Revise & Resubmit' ? 'resubmission' : 'customer response'} — due ${dstr(d.dueDate)}.`, d.dueDate, { view: 'document-detail', id: d.id });
+    } else if (d.status !== 'Approved' && !isOverdue(d.dueDate) && daysUntil(d.dueDate) <= 7) {
+      push('warning', 'Document due soon', `${d.docNumber} due ${dstr(d.dueDate)} (${daysUntil(d.dueDate)}d).`, d.dueDate, { view: 'document-detail', id: d.id });
+    }
+  }
+  for (const p of PROCUREMENT_POS) {
+    const due = p.revisedPromisedDate || p.promisedDate;
+    if (p.status !== 'Closed' && p.status !== 'Material Release' && isOverdue(due)) {
+      push('critical', 'Supplier delivery overdue', `${p.poNumber} (${supById[p.supplierId].name}) overdue since ${dstr(due)}.`, due, { view: 'ppo-detail', id: p.id });
+    } else if (p.status !== 'Closed' && !isOverdue(due) && daysUntil(due) <= 10) {
+      push('warning', 'Delivery approaching', `${p.poNumber} promised ${dstr(due)} (${daysUntil(due)}d).`, due, { view: 'ppo-detail', id: p.id });
+    }
+  }
+  for (const n of NCRS) {
+    if (n.status !== 'Closed' && isOverdue(n.targetClosure)) {
+      push('critical', 'NCR overdue', `${n.id} past target closure ${dstr(n.targetClosure)}.`, n.targetClosure, { view: 'ncr-detail', id: n.id });
+    }
+  }
+  for (const e of EQUIPMENT) {
+    if (e.qualityHold) push('critical', 'Quality hold', `${e.tag} is on quality hold pending NCR disposition.`, NOW, { view: 'equipment-detail', id: e.id });
+    if (e.dispatchStatus === 'Ready for Dispatch') push('info', 'Awaiting final release', `${e.tag} has quality release and is ready for dispatch.`, NOW, { view: 'equipment-detail', id: e.id });
+    const blocked = e.stages.find(s => s.status === 'blocked');
+    if (blocked && e.outcome !== 'ncr-hold') push('warning', 'Equipment blocked', `${e.tag} blocked at "${blocked.name}" — ${blocked.note}`, NOW, { view: 'equipment-detail', id: e.id });
+  }
+  for (const p of PROJECTS) {
+    if (p.status !== 'Closed' && isOverdue(p.contractEnd)) {
+      push('critical', 'Project milestone overdue', `${p.name} contractual completion was ${dstr(p.contractEnd)}.`, p.contractEnd, { view: 'project-detail', id: p.id });
+    }
+  }
+  for (const m of MATERIAL_BATCHES) {
+    if (m.certStatus !== 'Verified') push('warning', 'Certificate pending', `Heat ${m.heat} material certificate not yet verified.`, m.receivedDate, { view: 'material-detail', id: m.id });
+  }
+  out.sort((a, b) => (sevRank(a.sev) - sevRank(b.sev)) || (a.ts - b.ts));
+  return out;
+}
+function sevRank(s) { return s === 'critical' ? 0 : s === 'warning' ? 1 : 2; }
+
+function buildSearchIndex() {
+  const idx = [];
+  for (const p of PROJECTS) idx.push({ type: 'Project', id: p.id, label: p.name, sub: `${p.code} · ${custById[p.customerId].short}`, nav: { view: 'project-detail', id: p.id } });
+  for (const c of CUSTOMER_POS) idx.push({ type: 'Customer PO', id: c.id, label: c.poNumber, sub: `${custById[c.customerId].name}`, nav: { view: 'cpo-detail', id: c.id } });
+  for (const p of PROCUREMENT_POS) idx.push({ type: 'Procurement PO', id: p.id, label: p.poNumber, sub: `${supById[p.supplierId].name} — ${p.description}`, nav: { view: 'ppo-detail', id: p.id } });
+  for (const e of EQUIPMENT) idx.push({ type: 'Equipment', id: e.id, label: e.tag, sub: `${e.serial} — ${e.desc}`, nav: { view: 'equipment-detail', id: e.id } });
+  for (const d of DOCUMENTS) idx.push({ type: 'Document', id: d.id, label: d.docNumber, sub: `${d.title} (Rev ${d.revision})`, nav: { view: 'document-detail', id: d.id } });
+  for (const t of TRANSMITTALS) idx.push({ type: 'Transmittal', id: t.id, label: t.id, sub: `${t.recipient} — ${t.purpose}`, nav: { view: 'transmittal-detail', id: t.id } });
+  for (const m of MATERIAL_BATCHES) idx.push({ type: 'Material Batch', id: m.id, label: `Heat ${m.heat}`, sub: `${m.grade} — Batch ${m.batchNo}`, nav: { view: 'material-detail', id: m.id } });
+  for (const i of INSPECTIONS) idx.push({ type: 'Inspection', id: i.id, label: i.id, sub: `${i.type} — ${EQUIPMENT_BY_ID[i.equipmentId].tag}`, nav: { view: 'inspection-detail', id: i.id } });
+  for (const n of NCRS) idx.push({ type: 'NCR', id: n.id, label: n.id, sub: `${EQUIPMENT_BY_ID[n.equipmentId].tag} — ${n.severity}`, nav: { view: 'ncr-detail', id: n.id } });
+  for (const d of DISPATCH_RECORDS) idx.push({ type: 'Dispatch', id: d.id, label: d.id, sub: `${EQUIPMENT_BY_ID[d.equipmentId].tag} — ${d.deliveryRef}`, nav: { view: 'dispatch-detail', id: d.id } });
+  for (const s of SUPPLIERS) idx.push({ type: 'Supplier', id: s.id, label: s.name, sub: 'Supplier — view procurement POs', nav: { view: 'ppo-list' } });
+  return idx;
+}
+
+function searchEntities(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const idx = SEARCH_INDEX;
+  return idx.filter(it => it.id.toLowerCase().includes(q) || it.label.toLowerCase().includes(q) || it.sub.toLowerCase().includes(q)).slice(0, 60);
+}
+
+// ---------- chart data builders ----------
+function chartProductionByProject() {
+  return PROJECTS.map(p => ({ label: p.code, value: projectProgress(p) }));
+}
+function chartPoDeliveryPerformance() {
+  const relevant = PROCUREMENT_POS;
+  const onTime = relevant.filter(p => p.actualDeliveryDate && p.actualDeliveryDate <= (p.revisedPromisedDate || p.promisedDate)).length;
+  const late = relevant.filter(p => (p.actualDeliveryDate && p.actualDeliveryDate > (p.revisedPromisedDate || p.promisedDate)) || (!p.actualDeliveryDate && isOverdue(p.revisedPromisedDate || p.promisedDate))).length;
+  const pending = relevant.length - onTime - late;
+  return [{ label: 'On Time', value: onTime }, { label: 'Late', value: late }, { label: 'Pending', value: pending }];
+}
+function chartDocTurnaround() {
+  const buckets = { 'Drawings': [], 'Certificates': [], 'Inspection Reports': [], 'Procedures': [] };
+  const map = { 'Engineering Drawing': 'Drawings', 'General Arrangement Drawing': 'Drawings', 'Fabrication Drawing': 'Drawings',
+    'Material Test Certificate': 'Certificates', 'Certificate of Conformity': 'Certificates',
+    'Inspection Report': 'Inspection Reports', 'NDT Report': 'Inspection Reports', 'Dimensional Inspection Report': 'Inspection Reports',
+    'Welding Procedure Specification': 'Procedures', 'Procedure Qualification Record': 'Procedures' };
+  for (const d of DOCUMENTS) {
+    const b = map[d.type]; if (!b) continue;
+    const submit = d.history.find(h => h.event.includes('Submitted'));
+    const approve = d.history.find(h => h.to === 'Approved');
+    if (submit && approve) buckets[b].push((approve.ts - submit.ts) / DAY);
+  }
+  return Object.entries(buckets).map(([label, arr]) => ({ label, value: arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0 }));
+}
+function chartStageDistribution() {
+  const phases = ['Planning & Engineering', 'Material', 'Fabrication', 'Testing & QA', 'Completion & Dispatch'];
+  const counts = Object.fromEntries(phases.map(p => [p, 0]));
+  for (const e of EQUIPMENT) counts[STAGE_PHASE(e.currentStageIdx)]++;
+  return phases.map(label => ({ label, value: counts[label] }));
+}
+function chartMilestonesPlannedVsActual() {
+  return PROJECTS.map(p => {
+    const ms = projectMilestones(p);
+    return { label: p.code, planned: ms.length, actual: ms.filter(m => m.done).length };
+  });
+}
+function chartIssuesByDept() {
+  const depts = {};
+  for (const n of NCRS.filter(n => n.status !== 'Closed')) depts[n.dept] = (depts[n.dept] || 0) + 1;
+  for (const e of EQUIPMENT) {
+    const b = e.stages.find(s => s.status === 'blocked');
+    if (b) { const d = STAGE_PHASE(b.idx) === 'Material' ? 'Procurement' : 'Production'; depts[d] = (depts[d] || 0) + 1; }
+  }
+  return Object.entries(depts).map(([label, value]) => ({ label, value }));
+}
+function chartQualityTrend() {
+  const earliest = Math.min(...PROJECTS.map(p => p.start));
+  const startD = new Date(earliest);
+  const monthsSpan = (new Date(NOW).getUTCFullYear() - startD.getUTCFullYear()) * 12 + (new Date(NOW).getUTCMonth() - startD.getUTCMonth());
+  const months = [];
+  for (let i = monthsSpan; i >= 0; i--) { const d = new Date(NOW); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - i); months.push(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)); }
+  const opened = months.map(m => NCRS.filter(n => monthKey(n.detectDate) === monthKey(m)).length);
+  const closed = months.map(m => NCRS.filter(n => n.actualClosure && monthKey(n.actualClosure) === monthKey(m)).length);
+  return { labels: months.map(monthLabel), opened, closed };
+}
+
+// ---------- dossier completeness ----------
+function dossierCompleteness(eq) {
+  const docs = DOCUMENTS.filter(d => d.equipmentId === eq.id);
+  const have = new Set(docs.filter(d => d.status === 'Approved').map(d => d.type));
+  const items = DOSSIER_REQUIREMENTS.map(req => ({ req, present: have.has(req) }));
+  const pct = Math.round(100 * items.filter(i => i.present).length / items.length);
+  return { items, pct };
+}
+
+
+// ============================================================================
+// OZONE Manufacturing & Traceability Platform — UI layer (router + renderers)
+// Depends on datagen.js + derived.js being loaded first.
+// ============================================================================
+
+// ---------- tiny icon set (stroke, 24x24, currentColor) ----------
+const ICONS = {
+  dashboard: 'M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6V11h-6v9Zm0-16v5h6V4h-6Z',
+  projects: 'M4 7h16M4 12h16M4 17h10',
+  cpo: 'M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm9 0v5h5M8 13h8M8 17h5',
+  ppo: 'M3 7h18M3 7l2-4h14l2 4M3 7v13a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V7M8 11h8',
+  docs: 'M7 3h7l4 4v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm6 0v4h4M9 13h6M9 17h6M9 9h2',
+  materials: 'M12 3 3 8l9 5 9-5-9-5Zm-9 5v8l9 5 9-5V8M12 13v8',
+  tracker: 'M4 7a1 1 0 0 1 1-1h3V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2h3a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7Zm4-2v3h8V5',
+  quality: 'M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Zm-2.3 10 1.8 1.8L16 9.4',
+  ncr: 'M12 3 2 21h20L12 3Zm0 6v5m0 3h.01',
+  dispatch: 'M3 7h11v9H3V7Zm11 3h4l3 3v3h-7v-6ZM6.5 19.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm11 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z',
+  reports: 'M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm3 9v5m4-9v9m4-5v5',
+  bell: 'M6 9a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13 6 9Zm4.5 9.5a1.5 1.5 0 0 0 3 0',
+  admin: 'M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6l-9-4Zm-3 10 2 2 4-4',
+  search: 'M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm10 17-5.5-5.5',
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  check: 'M5 12.5 10 17l9-10',
+  clock: 'M12 7v5l3.5 3.5M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z',
+  alert: 'M12 2 2 20h20L12 2Zm0 7v5m0 3h.01',
+  x: 'M6 6l12 12M18 6 6 18',
+  chevron: 'M9 6l6 6-6 6',
+  qrbox: 'M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm13-0h1v1h-1v-1Zm3 0h1v6h-6v-1h5v-5Zm-3 3h1v1h-1v-1Zm-2 2h1v1h-1v-1Z',
+  copy: 'M9 9h10v10H9V9Zm-4 4V5a1 1 0 0 1 1-1h8',
+  external: 'M14 4h6v6M20 4 10 14M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5',
+  info: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 7v6m0-9h.01',
+  user: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm-8 9c0-4 3.6-7 8-7s8 3 8 7',
+  box: 'M12 2 3 7l9 5 9-5-9-5Zm-9 5v10l9 5 9-5V7M3 7l9 5m0 10V12m9-5-9 5',
+  pin: 'M12 2a6 6 0 0 1 6 6c0 4.5-6 13-6 13S6 12.5 6 8a6 6 0 0 1 6-6Zm0 8.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z',
+  hold: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM9 9v6m6-6v6',
+  grid: 'M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z',
+};
+function icon(name, cls) {
+  const p = ICONS[name] || ICONS.info;
+  return `<svg class="${cls || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p.split('M').filter(Boolean).map(seg => `<path d="M${seg}"/>`).join('')}</svg>`;
+}
+
+// ---------- generic helpers ----------
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function fmtMoney(n, cur) { return `${cur || 'OMR'} ${Number(n).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`; }
+function fmtInt(n) { return Number(n).toLocaleString('en-US'); }
+function fmtPct(n) { return `${n}%`; }
+function nav(view, id, extra) {
+  let s = `data-nav-view="${view}"`;
+  if (id) s += ` data-nav-id="${escapeHtml(id)}"`;
+  if (extra) s += ` data-nav-extra='${escapeHtml(JSON.stringify(extra))}'`;
+  return s;
+}
+
+// ---------- status → badge mapping ----------
+function badge(text, kind) { return `<span class="badge b-${kind}"><span class="dot"></span>${escapeHtml(text)}</span>`; }
+function projectStatusBadge(s) {
+  const map = { Active: 'good', 'On Hold': 'hold', Closed: 'muted', Completed: 'info', Planning: 'info', Draft: 'muted' };
+  return badge(s, map[s] || 'muted');
+}
+function cpoStatusBadge(s) {
+  const map = { Received: 'info', Reviewed: 'info', 'Accepted / Released': 'info', Planning: 'info', 'In Execution': 'warn', 'Partially Delivered': 'warn', 'Fully Delivered': 'good', Closed: 'muted' };
+  return badge(s, map[s] || 'muted');
+}
+function ppoStatusBadge(s) {
+  const map = { Requisition: 'muted', 'Technical/Commercial Review': 'muted', Approval: 'muted', 'PO Issued': 'info', 'Supplier Acknowledgement': 'info', 'Manufacturing/Preparation': 'warn', Inspection: 'warn', Dispatch: 'warn', 'Goods Receipt': 'warn', 'Material Release': 'good', Closed: 'muted' };
+  return badge(s, map[s] || 'muted');
+}
+function docStatusBadge(s) {
+  const map = { Draft: 'muted', 'Internal Review': 'info', 'Approved for Submission': 'info', Submitted: 'warn', 'Under Customer Review': 'warn', Approved: 'good', 'Approved with Comments': 'good', 'Revise & Resubmit': 'bad', Rejected: 'bad', Superseded: 'muted', Closed: 'muted' };
+  return badge(s, map[s] || 'muted');
+}
+function ncrStatusBadge(s) {
+  const map = { Open: 'bad', Containment: 'bad', 'Disposition Review': 'warn', 'Rework/Repair': 'warn', Reinspection: 'warn', 'Closure Review': 'info', Closed: 'good' };
+  return badge(s, map[s] || 'muted');
+}
+function inspResultBadge(r) { return badge(r, r === 'Pass' ? 'good' : r === 'Fail' ? 'bad' : 'muted'); }
+function dispatchStatusBadge(s) {
+  const map = { 'Not Ready': 'muted', 'Ready for Dispatch': 'warn', Dispatched: 'info', Delivered: 'good' };
+  return badge(s, map[s] || 'muted');
+}
+function severityBadge(s) { return badge(s, s === 'Major' ? 'bad' : 'warn'); }
+
+// ---------- misc entity lookups ----------
+function projectName(id) { return projById[id] ? projById[id].name : id; }
+function projectCode(id) { return projById[id] ? projById[id].code : id; }
+function custName(projId) { return custById[projById[projId].customerId].name; }
+
+// ---------- table component ----------
+// columns: [{key, label, align, render(row), sortable, sortVal(row)}]
+function renderTable(columns, rows, opts) {
+  opts = opts || {};
+  if (!rows.length) return `<div class="table-wrap card"><div class="table-empty">${escapeHtml(opts.emptyText || 'No records match the current filter.')}</div></div>`;
+  const sortKey = opts.sortKey, sortDir = opts.sortDir || 'asc';
+  const thead = columns.map(c => {
+    const sortable = c.sortable ? ' sortable' : '';
+    const active = sortKey === c.key ? ` (${sortDir === 'asc' ? '↑' : '↓'})` : '';
+    const attrs = c.sortable ? ` data-sort-key="${c.key}"` : '';
+    return `<th class="${sortable}" style="${c.align ? `text-align:${c.align}` : ''}"${attrs}>${escapeHtml(c.label)}${active}</th>`;
+  }).join('');
+  const tbody = rows.map(row => {
+    const navAttrs = opts.rowNav ? nav(opts.rowNav(row).view, opts.rowNav(row).id, opts.rowNav(row).extra) : '';
+    const cls = opts.rowNav ? 'clickable' : '';
+    const tds = columns.map(c => `<td style="${c.align ? `text-align:${c.align}` : ''}">${c.render(row)}</td>`).join('');
+    return `<tr class="${cls}" ${navAttrs}>${tds}</tr>`;
+  }).join('');
+  return `<div class="table-wrap card"><table class="dtable" ${opts.tableId ? `data-table-id="${opts.tableId}"` : ''}><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table></div>`;
+}
+function sortRows(rows, key, dir, valueFn) {
+  const sorted = rows.slice().sort((a, b) => {
+    const va = valueFn(a, key), vb = valueFn(b, key);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1; if (vb == null) return -1;
+    if (typeof va === 'string') return va.localeCompare(vb);
+    return va - vb;
+  });
+  if (dir === 'desc') sorted.reverse();
+  return sorted;
+}
+
+// ---------- breadcrumb + tabs ----------
+function renderBreadcrumb() {
+  const items = navStack.map((n, i) => {
+    const isLast = i === navStack.length - 1;
+    return `<span class="bc-item ${isLast ? 'current' : ''}" ${isLast ? '' : `data-crumb="${i}"`}>${escapeHtml(n.title)}</span>`;
+  });
+  return items.join(`<span class="bc-sep">/</span>`);
+}
+function renderTabs(tabs, activeKey) {
+  // tabs: [{key,label,count}]
+  return `<div class="tabstrip">${tabs.map(t => `<div class="tab ${t.key === activeKey ? 'active' : ''}" data-settab="${t.key}">${escapeHtml(t.label)}${t.count != null ? `<span class="tc">${t.count}</span>` : ''}</div>`).join('')}</div>`;
+}
+
+// ---------- KPI tile ----------
+function kpiTile(label, value, caption, flag, navTarget) {
+  return `<div class="card kpi ${flag ? `flag-${flag}` : ''}" ${navTarget ? nav(navTarget.view, navTarget.id, navTarget.extra) : ''}>
+    <div class="kv">${value}</div><div class="kl">${escapeHtml(label)}</div><div class="kc">${escapeHtml(caption)}</div>
+  </div>`;
+}
+
+// ---------- SVG charts ----------
+function svgEl(w, h, inner) { return `<svg class="chart" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="xMinYMin meet">${inner}</svg>`; }
+function hBarChart(data, opts) {
+  opts = opts || {};
+  const w = 520, barH = 22, gap = 12, left = opts.leftPad || 150, right = 50, top = 8;
+  const max = opts.max || Math.max(1, ...data.map(d => d.value));
+  const h = top + data.length * (barH + gap);
+  let rows = '';
+  data.forEach((d, i) => {
+    const y = top + i * (barH + gap);
+    const bw = Math.max(2, (w - left - right) * (d.value / max));
+    rows += `<text x="${left - 8}" y="${y + barH / 2 + 4}" font-size="11" text-anchor="end">${escapeHtml(d.label)}</text>`;
+    rows += `<rect x="${left}" y="${y}" width="${w - left - right}" height="${barH}" fill="var(--surface-2)" rx="4"></rect>`;
+    rows += `<rect x="${left}" y="${y}" width="${bw}" height="${barH}" class="barfill" rx="4"></rect>`;
+    rows += `<text x="${left + bw + 8}" y="${y + barH / 2 + 4}" font-size="11" class="valuelabel">${opts.fmt ? opts.fmt(d.value) : d.value}</text>`;
+  });
+  return svgEl(w, h, rows);
+}
+function hGroupedBarChart(data, opts) {
+  opts = opts || {};
+  const w = 540, barH = 9, gap = 20, left = opts.leftPad || 150, right = 56, top = 10;
+  const max = Math.max(1, ...data.map(d => Math.max(d.planned, d.actual)));
+  const h = top + data.length * (barH * 2 + gap);
+  let rows = '';
+  data.forEach((d, i) => {
+    const y = top + i * (barH * 2 + gap);
+    const bw1 = Math.max(2, (w - left - right) * (d.planned / max));
+    const bw2 = Math.max(2, (w - left - right) * (d.actual / max));
+    rows += `<text x="${left - 8}" y="${y + barH + 3}" font-size="11" text-anchor="end">${escapeHtml(d.label)}</text>`;
+    rows += `<rect x="${left}" y="${y}" width="${bw1}" height="${barH}" fill="var(--border)" rx="3"></rect>`;
+    rows += `<text x="${left + bw1 + 6}" y="${y + barH}" font-size="9.5" class="valuelabel">${d.planned}</text>`;
+    rows += `<rect x="${left}" y="${y + barH + 3}" width="${bw2}" height="${barH}" class="barfill" rx="3"></rect>`;
+    rows += `<text x="${left + bw2 + 6}" y="${y + barH * 2 + 3}" font-size="9.5" class="valuelabel">${d.actual}</text>`;
+  });
+  rows += `<g transform="translate(${left},${h - 2})">
+    <rect x="0" y="0" width="10" height="8" fill="var(--border)" rx="2"></rect><text x="14" y="7" font-size="9.5">Planned</text>
+    <rect x="70" y="0" width="10" height="8" class="barfill" rx="2"></rect><text x="84" y="7" font-size="9.5">Actual</text>
+  </g>`;
+  return svgEl(w, h + 14, rows);
+}
+function donutChart(data, opts) {
+  opts = opts || {};
+  const size = 190, r = 70, cx = 95, cy = 95, strokeW = 26;
+  const total = Math.max(1, data.reduce((s, d) => s + d.value, 0));
+  const colors = ['var(--accent)', 'var(--hold)', 'var(--info)', 'var(--warn)', 'var(--good)', 'var(--bad)'];
+  let acc = 0, segs = '';
+  const circ = 2 * Math.PI * r;
+  data.forEach((d, i) => {
+    const frac = d.value / total;
+    const dash = frac * circ;
+    segs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors[i % colors.length]}" stroke-width="${strokeW}" stroke-dasharray="${dash} ${circ - dash}" stroke-dashoffset="${-acc}" transform="rotate(-90 ${cx} ${cy})"></circle>`;
+    acc += dash;
+  });
+  const legend = data.map((d, i) => `<div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:4px"><span style="width:9px;height:9px;border-radius:2px;background:${colors[i % colors.length]};flex:none"></span>${escapeHtml(d.label)} <span class="mono" style="color:var(--faint);margin-left:auto">${d.value}</span></div>`).join('');
+  return `<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+    <svg viewBox="0 0 ${size} ${size}" width="150" height="150">${segs}<circle cx="${cx}" cy="${cy}" r="${r - strokeW / 2 - 2}" fill="var(--surface)"></circle><text x="${cx}" y="${cy + 5}" text-anchor="middle" font-size="18" font-weight="800" fill="var(--ink)" font-family="var(--font-display)">${total}</text></svg>
+    <div style="flex:1;min-width:120px">${legend}</div>
+  </div>`;
+}
+function lineChart(labels, series, opts) {
+  opts = opts || {};
+  const w = 560, h = 160, left = 30, right = 14, top = 12, bottom = 26;
+  const max = Math.max(1, ...series.flatMap(s => s.values));
+  const innerW = w - left - right, innerH = h - top - bottom;
+  const n = labels.length;
+  const x = i => left + (n <= 1 ? 0 : innerW * i / (n - 1));
+  const y = v => top + innerH - innerH * (v / max);
+  const colors = ['var(--accent)', 'var(--bad)'];
+  let grid = '';
+  for (let gy = 0; gy <= 4; gy++) { const yy = top + innerH * gy / 4; grid += `<line x1="${left}" y1="${yy}" x2="${w - right}" y2="${yy}" class="gridline"></line>`; }
+  let paths = series.map((s, si) => {
+    const d = s.values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const dots = s.values.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.4" fill="${colors[si % colors.length]}"></circle>`).join('');
+    return `<path d="${d}" fill="none" stroke="${colors[si % colors.length]}" stroke-width="2"></path>${dots}`;
+  }).join('');
+  const stepLabel = Math.ceil(n / 9);
+  let xlabels = '';
+  for (let i = 0; i < n; i += stepLabel) xlabels += `<text x="${x(i).toFixed(1)}" y="${h - 6}" font-size="9" text-anchor="middle">${escapeHtml(labels[i])}</text>`;
+  const legend = series.map((s, i) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:10.5px"><span style="width:8px;height:8px;border-radius:50%;background:${colors[i % colors.length]}"></span>${escapeHtml(s.name)}</span>`).join('');
+  return `<div>${svgEl(w, h, grid + paths + xlabels)}<div style="margin-top:4px">${legend}</div></div>`;
+}
+
+// ---------- equipment stage timeline ----------
+function stageDotIcon(status) {
+  if (status === 'done') return icon('check');
+  if (status === 'blocked') return icon('x');
+  if (status === 'skipped') return icon('chevron');
+  if (status === 'current') return '';
+  return '';
+}
+function renderStageTimeline(eq) {
+  const items = eq.stages.map(s => {
+    const cls = s.status;
+    const when = s.status === 'done' ? dstr(s.date) : s.status === 'blocked' ? 'In progress — blocked' : s.status === 'skipped' ? 'Skipped' : s.status === 'current' ? 'In progress' : 'Pending';
+    const note = s.note ? `<div class="tl-note ${s.status === 'blocked' ? 'warn-note' : ''}">${escapeHtml(s.note)}</div>` : '';
+    const actor = s.actor && (s.status === 'done' || s.status === 'blocked' || s.status === 'skipped') ? `<div class="tl-actor">${s.status === 'blocked' ? 'Flagged by' : s.status === 'skipped' ? 'Recorded by' : 'Completed by'} ${escapeHtml(userName(s.actor))}</div>` : '';
+    return `<div class="tl-item ${cls}">
+      <div class="tl-dot">${stageDotIcon(s.status)}</div>
+      <div class="tl-head"><span class="tl-name">${s.idx + 1}. ${escapeHtml(s.name)}</span><span class="tl-when">${when}</span></div>
+      ${note}${actor}
+    </div>`;
+  }).join('');
+  return `<div class="timeline">${items}</div>`;
+}
+
+// ---------- document revision history timeline ----------
+function renderDocHistory(doc) {
+  const items = doc.history.map(h => {
+    const isNeg = h.to === 'Revise & Resubmit' || h.to === 'Rejected';
+    return `<div class="tl-item done">
+      <div class="tl-dot" style="${isNeg ? 'border-color:var(--bad);color:var(--bad);background:var(--bad-weak)' : ''}">${isNeg ? icon('alert') : icon('check')}</div>
+      <div class="tl-head"><span class="tl-name">${escapeHtml(h.event)} ${h.rev ? `<span class="mono" style="color:var(--faint);font-weight:500">Rev ${h.rev}</span>` : ''}</span><span class="tl-when">${dtstr(h.ts)}</span></div>
+      ${h.comment ? `<div class="tl-note ${isNeg ? 'warn-note' : ''}">${escapeHtml(h.comment)}</div>` : ''}
+      ${h.transmittal ? `<div class="tl-actor">Via transmittal <span class="link mono" ${nav('transmittal-detail', h.transmittal)}>${h.transmittal}</span></div>` : ''}
+      <div class="tl-actor">${escapeHtml(userName(h.actor))}${h.from ? ` · ${escapeHtml(h.from)} → ${escapeHtml(h.to)}` : ''}</div>
+    </div>`;
+  }).join('');
+  return `<div class="timeline">${items}</div>`;
+}
+
+// ---------- QR placeholder ----------
+function renderQr(eq) {
+  const cells = qrPattern(eq.id + eq.tag);
+  const cell = 9, pad = 10, size = 11 * cell + pad * 2;
+  let rects = '';
+  for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) {
+    if (cells[y * 11 + x]) rects += `<rect x="${pad + x * cell}" y="${pad + y * cell}" width="${cell}" height="${cell}" fill="var(--ink)"></rect>`;
+  }
+  return `<div class="qr-box card">
+    <svg width="132" height="132" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="var(--surface)"></rect>${rects}</svg>
+    <div class="qr-id">${eq.id}</div>
+    <div class="qr-cap">Demo traceability code — illustrative only, not scannable.<br>In production this resolves to this item's full traceability page.</div>
+  </div>`;
+}
+
+
+// ============================================================================
+// View renderers. Each returns an HTML string for #viewport.
+// ============================================================================
+
+function pageHead(title, lede, metaHtml) {
+  return `<div class="page-head"><div><h1>${escapeHtml(title)}</h1>${lede ? `<div class="lede">${lede}</div>` : ''}${metaHtml ? `<div class="headmeta">${metaHtml}</div>` : ''}</div></div>`;
+}
+function sectionTitle(t, hint) { return `<div class="section-title"><span>${escapeHtml(t)}</span>${hint ? `<span class="hint">${escapeHtml(hint)}</span>` : ''}</div>`; }
+function selectFilter(key, label, options, current) {
+  return `<select data-filter-key="${key}" aria-label="${escapeHtml(label)}">
+    <option value="">${escapeHtml(label)}: All</option>
+    ${options.map(o => `<option value="${escapeHtml(o)}" ${o === current ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}
+  </select>`;
+}
+
+// ---------------------------------------------------------------- DASHBOARD
+function viewDashboard(p) {
+  const k = computeKPIs();
+  const html = [];
+  html.push(`<div class="banner info">${icon('info')}<div><b>Demonstration data.</b> Everything on this page — projects, purchase orders, equipment, documents, inspections — is generated sample data for walking through the proposed OZONE Manufacturing &amp; Traceability Platform. No live ERP, SMTP or customer system is connected.</div></div>`);
+  html.push(pageHead('Executive Dashboard', 'Live view of every project, commitment, document and manufacturing milestone — computed from the records below, not entered by hand.'));
+
+  html.push(`<div class="grid grid-kpi">`
+    + kpiTile('Active Projects', k.activeProjects, 'Projects with status = Active', null, { view: 'projects-list', extra: { status: 'Active' } })
+    + kpiTile('Customer PO Value', fmtMoney(k.cpoValue), 'Sum of all customer PO values', null, { view: 'cpo-list' })
+    + kpiTile('Procurement Committed', fmtMoney(k.ppoValue), 'Sum of all internal procurement PO values', null, { view: 'ppo-list' })
+    + kpiTile('Equipment in Production', k.equipInProduction, 'Stage started, not yet delivered', null, { view: 'equipment-list' })
+    + kpiTile('Docs Awaiting Action', k.docsAwaiting, 'Status = Internal Review or Submitted', k.docsAwaiting ? 'warn' : null, { view: 'documents-list', extra: { status: 'Internal Review,Submitted' } })
+    + kpiTile('Overdue Documents', k.overdueDocs, 'Not approved, past due date', k.overdueDocs ? 'bad' : 'good', { view: 'documents-list', extra: { overdue: '1' } })
+    + kpiTile('Overdue Supplier POs', k.overdueSupplier, 'Not received, past promised date', k.overdueSupplier ? 'bad' : 'good', { view: 'ppo-list', extra: { overdue: '1' } })
+    + kpiTile('Material Shortages', k.materialShortages, 'Procurement POs with balance qty > 0', k.materialShortages ? 'warn' : null, { view: 'ppo-list', extra: { shortage: '1' } })
+    + kpiTile('Milestones Complete', `${k.milestonesActual}/${k.milestonesPlanned}`, 'Engineering · Material · Fabrication · Dispatch, across all projects', null, { view: 'reports-list' })
+    + kpiTile('First-Time Accept Rate', k.firstTimeAccept != null ? fmtPct(k.firstTimeAccept) : '—', 'Final inspections passed on first attempt', null, { view: 'inspections-list' })
+    + kpiTile('Open NCRs', k.openNcrs, 'Status ≠ Closed', k.openNcrs ? 'bad' : 'good', { view: 'ncr-list', extra: { status: 'open' } })
+    + kpiTile('Ready for Dispatch', k.readyDispatch, 'Quality released, awaiting shipment', null, { view: 'equipment-list', extra: { dispatch: 'Ready for Dispatch' } })
+    + kpiTile('Overdue Project Milestones', k.overdueMilestones, 'Active projects past contractual completion', k.overdueMilestones ? 'bad' : 'good', { view: 'projects-list' })
+    + `</div>`);
+
+  if (k.blockedEquip.length) {
+    html.push(sectionTitle('Critical blockers', 'Equipment currently stalled, with the responsible owner'));
+    html.push(`<div class="statusgrid">` + k.blockedEquip.map(e => {
+      const b = e.stages.find(s => s.status === 'blocked');
+      return `<div class="statusrow" style="cursor:pointer" ${nav('equipment-detail', e.id)}>
+        <div><div style="font-weight:700">${escapeHtml(e.tag)}</div><div style="color:var(--faint);font-size:11px">${escapeHtml(b ? b.name : '')} · ${escapeHtml(userName(e.owner))}</div></div>
+        ${badge('Blocked', 'bad')}
+      </div>`;
+    }).join('') + `</div>`);
+  }
+
+  html.push(sectionTitle('Charts', 'Each chart is computed from the records in this demo and links through to the underlying list'));
+  html.push(`<div class="grid grid-charts">`
+    + chartCard('Production progress by project', 'Average manufacturing stage reached, as % of the 22-stage route', hBarChart(chartProductionByProject(), { fmt: v => v + '%' }))
+    + chartCard('PO delivery performance', 'Procurement POs by on-time vs. late vs. still pending', donutChart(chartPoDeliveryPerformance()))
+    + chartCard('Document approval turnaround', 'Average calendar days from submission to customer approval, by document group', hBarChart(chartDocTurnaround(), { fmt: v => v + 'd' }))
+    + chartCard('Manufacturing stage distribution', 'Equipment items grouped by current phase of the 22-stage route', donutChart(chartStageDistribution()))
+    + chartCard('Planned vs. actual milestones', 'Engineering / Material / Fabrication / Dispatch milestones per project', hGroupedBarChart(chartMilestonesPlannedVsActual()))
+    + chartCard('Open issues by department', 'Open NCRs and blocked operations, grouped by originating department', hBarChart(chartIssuesByDept()))
+    + `</div>`);
+  html.push(sectionTitle('Quality & rework trend', 'NCRs opened vs. closed, by month, across full project history'));
+  const qt = chartQualityTrend();
+  html.push(`<div class="card chart-card">${lineChart(qt.labels, [{ name: 'Opened', values: qt.opened }, { name: 'Closed', values: qt.closed }])}</div>`);
+
+  return html.join('');
+}
+function chartCard(title, desc, inner) {
+  return `<div class="card chart-card"><div class="ct">${escapeHtml(title)}</div><div class="cd">${escapeHtml(desc)}</div>${inner}</div>`;
+}
+
+// ---------------------------------------------------------------- PROJECTS
+function viewProjectsList(p) {
+  const status = p.status || '';
+  let rows = PROJECTS.slice();
+  if (status) rows = rows.filter(r => r.status === status);
+  const html = [];
+  html.push(pageHead('Projects', 'Master project register — contract scope, facility, lifecycle status and overall progress.'));
+  html.push(`<div class="filters">${selectFilter('status', 'Status', [...new Set(PROJECTS.map(x => x.status))], status)}<span class="fcount">${rows.length} of ${PROJECTS.length} projects</span></div>`);
+  html.push(renderTable([
+    { key: 'code', label: 'Project', render: r => `<div style="font-weight:700">${escapeHtml(r.name)}</div><div class="mono" style="color:var(--faint);font-size:11px">${escapeHtml(r.code)}</div>` },
+    { key: 'customer', label: 'Customer', render: r => escapeHtml(custById[r.customerId].name) },
+    { key: 'facility', label: 'Facility', render: r => escapeHtml(r.facility) },
+    { key: 'priority', label: 'Priority', render: r => badge(r.priority, r.priority === 'Critical' ? 'bad' : r.priority === 'High' ? 'warn' : 'info') },
+    { key: 'status', label: 'Status', render: r => projectStatusBadge(r.status) },
+    { key: 'progress', label: 'Progress', align: 'right', render: r => `<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="mono">${projectProgress(r)}%</span><span class="progress-bar" style="width:60px"><i style="width:${projectProgress(r)}%"></i></span></div>` },
+    { key: 'end', label: 'Contract Completion', align: 'right', render: r => `<span class="mono" style="${r.status !== 'Closed' && isOverdue(r.contractEnd) ? 'color:var(--bad);font-weight:700' : ''}">${dstr(r.contractEnd)}</span>` },
+  ], rows, { rowNav: r => ({ view: 'project-detail', id: r.id }) }));
+  return html.join('');
+}
+
+const PROJECT_TABS = [
+  { key: 'overview', label: 'Overview' }, { key: 'pos', label: 'POs' }, { key: 'documents', label: 'Documents' },
+  { key: 'materials', label: 'Materials' }, { key: 'production', label: 'Production' }, { key: 'quality', label: 'Quality' },
+  { key: 'issues', label: 'Issues' }, { key: 'deliveries', label: 'Deliveries' }, { key: 'audit', label: 'Audit History' },
+];
+function viewProjectDetail(p) {
+  const proj = projById[p.id];
+  if (!proj) return emptyState('Project not found', 'This project record does not exist.');
+  const tab = p.tab || 'overview';
+  const cpos = CUSTOMER_POS.filter(c => c.projectId === proj.id);
+  const ppos = PROCUREMENT_POS.filter(x => x.projectId === proj.id);
+  const eqs = EQUIPMENT.filter(e => e.projectId === proj.id);
+  const docs = DOCUMENTS.filter(d => d.projectId === proj.id);
+  const mats = MATERIAL_BATCHES.filter(m => m.projectId === proj.id);
+  const insps = INSPECTIONS.filter(i => i.projectId === proj.id);
+  const ncrs = NCRS.filter(n => n.projectId === proj.id);
+  const disps = DISPATCH_RECORDS.filter(d => d.projectId === proj.id);
+  const blocked = eqs.filter(e => e.stages.some(s => s.status === 'blocked'));
+
+  const html = [];
+  html.push(pageHead(proj.name, proj.desc,
+    `${projectStatusBadge(proj.status)}${badge(proj.priority, proj.priority === 'Critical' ? 'bad' : proj.priority === 'High' ? 'warn' : 'info')}<span class="chip mono">${proj.code}</span><span class="chip">${escapeHtml(proj.facility)}</span>`));
+  if (proj.status === 'On Hold') html.push(`<div class="banner warn">${icon('hold')}<div><b>On hold.</b> ${escapeHtml(proj.holdReason)}</div></div>`);
+  html.push(renderTabs(PROJECT_TABS.map(t => ({ ...t, count: tabCount(t.key) })), tab));
+
+  function tabCount(k) {
+    return { overview: null, pos: cpos.length + ppos.length, documents: docs.length, materials: mats.length,
+      production: eqs.length, quality: insps.length + ncrs.length, issues: blocked.length + ncrs.filter(n => n.status !== 'Closed').length,
+      deliveries: disps.length, audit: null }[k];
+  }
+
+  if (tab === 'overview') {
+    html.push(`<div class="detail-grid">
+      <div>
+        <div class="card card-pad">
+          <div class="subhead">Project details</div>
+          <div class="kv-list">
+            <div class="kv-row"><span class="k">Customer</span><span class="v">${escapeHtml(custById[proj.customerId].name)}</span></div>
+            <div class="kv-row"><span class="k">Customer reference</span><span class="v mono">${escapeHtml(proj.custRef)}</span></div>
+            <div class="kv-row"><span class="k">Project manager</span><span class="v">${escapeHtml(userName(proj.pm))}</span></div>
+            <div class="kv-row"><span class="k">Facility</span><span class="v">${escapeHtml(proj.facility)}</span></div>
+            <div class="kv-row"><span class="k">Start date</span><span class="v mono">${dstr(proj.start)}</span></div>
+            <div class="kv-row"><span class="k">Contractual completion</span><span class="v mono">${dstr(proj.contractEnd)}</span></div>
+            ${proj.actualEnd ? `<div class="kv-row"><span class="k">Actual completion</span><span class="v mono">${dstr(proj.actualEnd)}</span></div>` : ''}
+            <div class="kv-row"><span class="k">Applicable specifications</span><span class="v">${proj.specs.join(', ')}</span></div>
+          </div>
+        </div>
+        <div class="section-title">Milestones</div>
+        <div class="card card-pad">${projectMilestones(proj).map(m => `<div class="doclist-row" style="cursor:default"><div class="main"><div class="t">${m.done ? icon('check', 'mono') : ''} ${escapeHtml(m.name)}</div><div class="s">Baseline ${dstr(m.planned)}</div></div>${badge(m.done ? 'Complete' : 'In Progress', m.done ? 'good' : 'warn')}</div>`).join('')}</div>
+      </div>
+      <div>
+        <div class="card card-pad">
+          <div class="subhead">Scope at a glance</div>
+          <div class="kv-list">
+            <div class="kv-row"><span class="k">Customer POs</span><span class="v">${cpos.length}</span></div>
+            <div class="kv-row"><span class="k">Procurement POs</span><span class="v">${ppos.length}</span></div>
+            <div class="kv-row"><span class="k">Equipment items</span><span class="v">${eqs.length}</span></div>
+            <div class="kv-row"><span class="k">Documents</span><span class="v">${docs.length}</span></div>
+            <div class="kv-row"><span class="k">Open NCRs</span><span class="v">${ncrs.filter(n => n.status !== 'Closed').length}</span></div>
+          </div>
+        </div>
+        <div class="section-title">Production progress</div>
+        <div class="card card-pad">
+          <div style="display:flex;align-items:center;gap:10px"><span class="progress-bar" style="flex:1"><i style="width:${projectProgress(proj)}%"></i></span><span class="mono" style="font-weight:700">${projectProgress(proj)}%</span></div>
+          <div style="font-size:11px;color:var(--faint);margin-top:6px">Average of each equipment item's current stage ÷ 22 stages.</div>
+        </div>
+      </div>
+    </div>`);
+  } else if (tab === 'pos') {
+    html.push(sectionTitle('Customer purchase orders'));
+    html.push(renderTable([
+      { key: 'po', label: 'PO Number', render: r => `<span class="mono">${escapeHtml(r.poNumber)}</span>` },
+      { key: 'val', label: 'Value', align: 'right', render: r => fmtMoney(r.value, r.currency) },
+      { key: 'lines', label: 'Lines', align: 'right', render: r => r.lines.length },
+      { key: 'status', label: 'Status', render: r => cpoStatusBadge(r.status) },
+      { key: 'due', label: 'Contract Delivery', align: 'right', render: r => `<span class="mono">${dstr(r.contractDeliveryDate)}</span>` },
+    ], cpos, { rowNav: r => ({ view: 'cpo-detail', id: r.id }) }));
+    html.push(sectionTitle('Internal procurement purchase orders'));
+    html.push(renderTable([
+      { key: 'po', label: 'PO Number', render: r => `<span class="mono">${escapeHtml(r.poNumber)}</span>` },
+      { key: 'supplier', label: 'Supplier', render: r => escapeHtml(supById[r.supplierId].name) },
+      { key: 'desc', label: 'Description', render: r => escapeHtml(r.description) },
+      { key: 'val', label: 'Value', align: 'right', render: r => fmtMoney(r.value, r.currency) },
+      { key: 'status', label: 'Status', render: r => ppoStatusBadge(r.status) },
+    ], ppos, { rowNav: r => ({ view: 'ppo-detail', id: r.id }) }));
+  } else if (tab === 'documents') {
+    html.push(renderTable(docColumns(), docs, { rowNav: r => ({ view: 'document-detail', id: r.id }) }));
+  } else if (tab === 'materials') {
+    html.push(renderTable(materialColumns(), mats, { rowNav: r => ({ view: 'material-detail', id: r.id }) }));
+  } else if (tab === 'production') {
+    html.push(renderTable(equipmentColumns(), eqs, { rowNav: r => ({ view: 'equipment-detail', id: r.id }) }));
+  } else if (tab === 'quality') {
+    html.push(sectionTitle('Inspections'));
+    html.push(renderTable(inspectionColumns(), insps, { rowNav: r => ({ view: 'inspection-detail', id: r.id }) }));
+    html.push(sectionTitle('Non-conformance reports'));
+    html.push(renderTable(ncrColumns(), ncrs, { rowNav: r => ({ view: 'ncr-detail', id: r.id }) }));
+  } else if (tab === 'issues') {
+    html.push(sectionTitle('Blocked equipment'));
+    if (!blocked.length) html.push(emptyInline('Nothing blocked on this project right now.'));
+    else html.push(`<div class="statusgrid">` + blocked.map(e => {
+      const b = e.stages.find(s => s.status === 'blocked');
+      return `<div class="statusrow" style="cursor:pointer" ${nav('equipment-detail', e.id)}><div><div style="font-weight:700">${escapeHtml(e.tag)}</div><div style="color:var(--faint);font-size:11px">${escapeHtml(b.name)}</div></div>${badge('Blocked', 'bad')}</div>`;
+    }).join('') + `</div>`);
+    html.push(sectionTitle('Open NCRs'));
+    html.push(renderTable(ncrColumns(), ncrs.filter(n => n.status !== 'Closed'), { rowNav: r => ({ view: 'ncr-detail', id: r.id }) }));
+  } else if (tab === 'deliveries') {
+    html.push(renderTable(dispatchColumns(), disps, { rowNav: r => ({ view: 'dispatch-detail', id: r.id }) }));
+  } else if (tab === 'audit') {
+    const entityIds = new Set([proj.id, ...cpos.map(c => c.id), ...ppos.map(c => c.id), ...eqs.map(e => e.id), ...docs.map(d => d.id), ...mats.map(m => m.id), ...insps.map(i => i.id), ...ncrs.map(n => n.id), ...disps.map(d => d.id)]);
+    html.push(renderAuditList(AUDIT_LOG.filter(a => entityIds.has(a.entityId)).slice().reverse()));
+  }
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- CUSTOMER POs
+function viewCpoList(p) {
+  const status = p.status || '';
+  let rows = CUSTOMER_POS.slice();
+  if (status) rows = rows.filter(r => r.status === status);
+  const html = [pageHead('Customer Purchase Orders', 'Every customer PO, its commercial value, amendment history and line-level manufacturing status.')];
+  html.push(`<div class="filters">${selectFilter('status', 'Status', [...new Set(CUSTOMER_POS.map(x => x.status))], status)}<span class="fcount">${rows.length} of ${CUSTOMER_POS.length} POs · ${fmtMoney(rows.reduce((s, r) => s + r.value, 0))}</span></div>`);
+  html.push(renderTable([
+    { key: 'po', label: 'PO Number', render: r => `<span class="mono">${escapeHtml(r.poNumber)}</span>` },
+    { key: 'project', label: 'Project', render: r => escapeHtml(projectCode(r.projectId)) },
+    { key: 'customer', label: 'Customer', render: r => escapeHtml(custById[r.customerId].name) },
+    { key: 'val', label: 'Value', align: 'right', render: r => fmtMoney(r.value, r.currency) },
+    { key: 'lines', label: 'Lines', align: 'right', render: r => r.lines.length },
+    { key: 'status', label: 'Status', render: r => cpoStatusBadge(r.status) },
+    { key: 'due', label: 'Contract Delivery', align: 'right', render: r => `<span class="mono">${dstr(r.contractDeliveryDate)}</span>` },
+  ], rows, { rowNav: r => ({ view: 'cpo-detail', id: r.id }) }));
+  return html.join('');
+}
+function viewCpoDetail(p) {
+  const cpo = CPO_BY_ID[p.id];
+  if (!cpo) return emptyState('PO not found', '');
+  const proj = projById[cpo.projectId];
+  const html = [];
+  html.push(pageHead(cpo.poNumber, `${escapeHtml(custById[cpo.customerId].name)} · Project <span class="link" ${nav('project-detail', proj.id)}>${escapeHtml(proj.code)}</span>`, cpoStatusBadge(cpo.status)));
+  html.push(`<div class="detail-grid"><div>
+    <div class="section-title">Lifecycle</div>
+    ${lifecycleStepper(['Received', 'Reviewed', 'Accepted/Released', 'Planning', 'In Execution', 'Partially Delivered', 'Fully Delivered', 'Closed'], cpo.status === 'Accepted / Released' ? 'Accepted/Released' : cpo.status)}
+    <div class="section-title">Line items (${cpo.lines.length})</div>
+    <div class="table-wrap card"><table class="dtable"><thead><tr><th>Line</th><th>Tag</th><th>Description</th><th style="text-align:right">Qty</th><th style="text-align:right">Line Value</th><th>Required Date</th><th>Equipment</th></tr></thead><tbody>
+    ${cpo.lines.map(l => `<tr><td class="mono">${l.lineNo}</td><td class="mono">${escapeHtml(l.tag)}</td><td>${escapeHtml(l.desc)}<div style="font-size:10.5px;color:var(--faint)">${escapeHtml(l.category)}</div></td><td style="text-align:right">${l.qty} ${l.unit}</td><td style="text-align:right">${fmtMoney(l.lineValue, cpo.currency)}</td><td class="mono">${dstr(l.requiredDate)}</td><td>${l.equipmentIds.map(id => `<span class="link mono" style="margin-right:6px" ${nav('equipment-detail', id)}>${escapeHtml(EQUIPMENT_BY_ID[id].tag)}</span>`).join('')}</td></tr>`).join('')}
+    </tbody></table></div>
+    ${cpo.amendments.length ? `<div class="section-title">Amendment history</div><div class="card card-pad">${cpo.amendments.map(a => `<div class="doclist-row" style="cursor:default"><div class="main"><div class="t">${escapeHtml(a.ref)} — ${escapeHtml(a.field)}</div><div class="s">${escapeHtml(a.from)} → ${escapeHtml(a.to)} · ${escapeHtml(a.reason)}</div><div class="s">Raised by ${escapeHtml(userName(a.by))}, approved by ${escapeHtml(a.approvedBy)} · ${dstr(a.date)}</div></div></div>`).join('')}</div>` : ''}
+  </div><div>
+    <div class="card card-pad">
+      <div class="subhead">PO details</div>
+      <div class="kv-list">
+        <div class="kv-row"><span class="k">Issue date</span><span class="v mono">${dstr(cpo.issueDate)}</span></div>
+        <div class="kv-row"><span class="k">Receipt date</span><span class="v mono">${dstr(cpo.receiptDate)}</span></div>
+        <div class="kv-row"><span class="k">Contract delivery</span><span class="v mono">${dstr(cpo.contractDeliveryDate)}</span></div>
+        <div class="kv-row"><span class="k">Currency</span><span class="v">${cpo.currency}</span></div>
+        <div class="kv-row"><span class="k">Total value</span><span class="v">${fmtMoney(cpo.value, cpo.currency)}</span></div>
+        <div class="kv-row"><span class="k">Responsible PM</span><span class="v">${escapeHtml(userName(cpo.pm))}</span></div>
+      </div>
+    </div>
+  </div></div>`);
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- PROCUREMENT POs
+function viewPpoList(p) {
+  const status = p.status || ''; const overdue = p.overdue === '1'; const shortage = p.shortage === '1'; const supplierId = p.supplierId || '';
+  let rows = PROCUREMENT_POS.slice();
+  if (status) rows = rows.filter(r => r.status === status);
+  if (supplierId) rows = rows.filter(r => r.supplierId === supplierId);
+  if (overdue) rows = rows.filter(r => r.status !== 'Closed' && r.status !== 'Material Release' && isOverdue(r.revisedPromisedDate || r.promisedDate));
+  if (shortage) rows = rows.filter(r => r.qtyBalance > 0 && r.status !== 'Closed');
+  const html = [pageHead('Procurement Purchase Orders', 'Internal procurement commitments — materials, consumables and subcontract services, with supplier delivery performance.')];
+  html.push(`<div class="filters">${selectFilter('status', 'Status', [...new Set(PROCUREMENT_POS.map(x => x.status))], status)}<span class="fcount">${rows.length} of ${PROCUREMENT_POS.length} POs · ${fmtMoney(rows.reduce((s, r) => s + r.value, 0))}</span></div>`);
+  html.push(renderTable([
+    { key: 'po', label: 'PO Number', render: r => `<span class="mono">${escapeHtml(r.poNumber)}</span>` },
+    { key: 'supplier', label: 'Supplier', render: r => escapeHtml(supById[r.supplierId].name) },
+    { key: 'project', label: 'Project', render: r => escapeHtml(projectCode(r.projectId)) },
+    { key: 'desc', label: 'Description', render: r => escapeHtml(r.description) },
+    { key: 'val', label: 'Value', align: 'right', render: r => fmtMoney(r.value, r.currency) },
+    { key: 'bal', label: 'Balance', align: 'right', render: r => `${r.qtyBalance} ${r.unit}` },
+    { key: 'due', label: 'Promised', align: 'right', render: r => { const d = r.revisedPromisedDate || r.promisedDate; const late = r.status !== 'Closed' && r.status !== 'Material Release' && isOverdue(d); return `<span class="mono" style="${late ? 'color:var(--bad);font-weight:700' : ''}">${dstr(d)}</span>`; } },
+    { key: 'status', label: 'Status', render: r => ppoStatusBadge(r.status) },
+  ], rows, { rowNav: r => ({ view: 'ppo-detail', id: r.id }) }));
+  return html.join('');
+}
+function viewPpoDetail(p) {
+  const ppo = PPO_BY_ID[p.id];
+  if (!ppo) return emptyState('PO not found', '');
+  const sup = supById[ppo.supplierId]; const proj = projById[ppo.projectId];
+  const late = ppo.status !== 'Closed' && ppo.status !== 'Material Release' && isOverdue(ppo.revisedPromisedDate || ppo.promisedDate);
+  const html = [];
+  html.push(pageHead(ppo.poNumber, `${escapeHtml(sup.name)} · Project <span class="link" ${nav('project-detail', proj.id)}>${escapeHtml(proj.code)}</span>`, ppoStatusBadge(ppo.status)));
+  if (late) html.push(`<div class="banner warn">${icon('alert')}<div><b>Overdue.</b> Promised delivery was ${dstr(ppo.revisedPromisedDate || ppo.promisedDate)}.</div></div>`);
+  html.push(`<div class="detail-grid"><div>
+    <div class="section-title">Milestones</div>
+    ${lifecycleStepper(['Requisition', 'Technical/Commercial Review', 'Approval', 'PO Issued', 'Supplier Acknowledgement', 'Manufacturing/Preparation', 'Inspection', 'Dispatch', 'Goods Receipt', 'Material Release', 'Closed'], ppo.status)}
+    <div class="section-title">Goods receipt</div>
+    <div class="card card-pad kv-list">
+      <div class="kv-row"><span class="k">Ordered</span><span class="v">${ppo.qty} ${ppo.unit}</span></div>
+      <div class="kv-row"><span class="k">Received</span><span class="v">${ppo.qtyReceived} ${ppo.unit}</span></div>
+      <div class="kv-row"><span class="k">Balance</span><span class="v" style="${ppo.qtyBalance > 0 ? 'color:var(--warn)' : ''}">${ppo.qtyBalance} ${ppo.unit}</span></div>
+      <div class="kv-row"><span class="k">Certificates required</span><span class="v">${ppo.certsRequired ? 'Yes' : 'No'}</span></div>
+    </div>
+    <div class="section-title">Audit trail</div>
+    ${renderAuditList(AUDIT_LOG.filter(a => a.entityId === ppo.id).slice().reverse())}
+  </div><div>
+    <div class="card card-pad"><div class="subhead">PO details</div><div class="kv-list">
+      <div class="kv-row"><span class="k">Description</span><span class="v">${escapeHtml(ppo.description)}</span></div>
+      <div class="kv-row"><span class="k">Value</span><span class="v">${fmtMoney(ppo.value, ppo.currency)}</span></div>
+      <div class="kv-row"><span class="k">Issue date</span><span class="v mono">${dstr(ppo.issueDate)}</span></div>
+      <div class="kv-row"><span class="k">Supplier ack.</span><span class="v mono">${dstr(ppo.ackDate)}</span></div>
+      <div class="kv-row"><span class="k">Promised date</span><span class="v mono">${dstr(ppo.promisedDate)}</span></div>
+      ${ppo.revisedPromisedDate ? `<div class="kv-row"><span class="k">Revised promised</span><span class="v mono" style="color:var(--warn)">${dstr(ppo.revisedPromisedDate)}</span></div>` : ''}
+      ${ppo.actualDeliveryDate ? `<div class="kv-row"><span class="k">Actual delivery</span><span class="v mono">${dstr(ppo.actualDeliveryDate)}</span></div>` : ''}
+      <div class="kv-row"><span class="k">Buyer</span><span class="v">${escapeHtml(userName(ppo.buyer))}</span></div>
+      <div class="kv-row"><span class="k">Expeditor</span><span class="v">${escapeHtml(userName(ppo.expeditor))}</span></div>
+    </div></div>
+  </div></div>`);
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- shared column sets
+function docColumns() {
+  return [
+    { key: 'num', label: 'Document', render: r => `<div style="font-weight:700" class="mono">${escapeHtml(r.docNumber)}</div><div style="font-size:11px;color:var(--faint)">${escapeHtml(r.type)}</div>` },
+    { key: 'proj', label: 'Project', render: r => escapeHtml(projectCode(r.projectId)) },
+    { key: 'eq', label: 'Equipment', render: r => r.equipmentId ? `<span class="mono">${escapeHtml(EQUIPMENT_BY_ID[r.equipmentId].tag)}</span>` : '—' },
+    { key: 'rev', label: 'Rev', render: r => `<span class="mono">${r.revision}</span>` },
+    { key: 'status', label: 'Status', render: r => docStatusBadge(r.status) },
+    { key: 'due', label: 'Due', align: 'right', render: r => `<span class="mono" style="${r.status !== 'Approved' && isOverdue(r.dueDate) ? 'color:var(--bad);font-weight:700' : ''}">${dstr(r.dueDate)}</span>` },
+  ];
+}
+function materialColumns() {
+  return [
+    { key: 'heat', label: 'Heat / Batch', render: r => `<span class="mono" style="font-weight:700">${escapeHtml(r.heat)}</span><div style="font-size:11px;color:var(--faint)">${escapeHtml(r.batchNo)}</div>` },
+    { key: 'grade', label: 'Grade', render: r => escapeHtml(r.grade) },
+    { key: 'supplier', label: 'Supplier', render: r => escapeHtml(supById[r.supplier].name) },
+    { key: 'qty', label: 'Received', align: 'right', render: r => r.qtyReceived },
+    { key: 'cert', label: 'Certificate', render: r => badge(r.certStatus, r.certStatus === 'Verified' ? 'good' : 'warn') },
+    { key: 'eq', label: 'Used On', render: r => r.usage.map(u => `<span class="link mono" style="margin-right:6px" ${nav('equipment-detail', u.equipmentId)}>${escapeHtml(EQUIPMENT_BY_ID[u.equipmentId].tag)}</span>`).join('') },
+  ];
+}
+function equipmentColumns() {
+  return [
+    { key: 'tag', label: 'Tag', render: r => `<span class="mono" style="font-weight:700">${escapeHtml(r.tag)}</span><div style="font-size:11px;color:var(--faint)">${escapeHtml(r.category)}</div>` },
+    { key: 'proj', label: 'Project', render: r => escapeHtml(projectCode(r.projectId)) },
+    { key: 'stage', label: 'Current Stage', render: r => `${r.currentStageIdx + 1}. ${escapeHtml(STAGE_DEFS[r.currentStageIdx])}` },
+    { key: 'progress', label: 'Progress', align: 'right', render: r => `<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><span class="mono">${Math.round(100 * r.currentStageIdx / 21)}%</span><span class="progress-bar" style="width:50px"><i style="width:${Math.round(100 * r.currentStageIdx / 21)}%"></i></span></div>` },
+    { key: 'hold', label: 'Hold', render: r => r.qualityHold ? badge('Quality Hold', 'bad') : (r.stages.some(s => s.status === 'blocked') ? badge('Blocked', 'warn') : badge('Clear', 'good')) },
+    { key: 'dispatch', label: 'Dispatch', render: r => dispatchStatusBadge(r.dispatchStatus) },
+  ];
+}
+function inspectionColumns() {
+  return [
+    { key: 'id', label: 'Inspection', render: r => `<span class="mono">${r.id}</span>` },
+    { key: 'type', label: 'Type', render: r => escapeHtml(r.type) },
+    { key: 'eq', label: 'Equipment', render: r => `<span class="link mono">${escapeHtml(EQUIPMENT_BY_ID[r.equipmentId].tag)}</span>` },
+    { key: 'date', label: 'Date', align: 'right', render: r => `<span class="mono">${dstr(r.actualDate)}</span>` },
+    { key: 'inspector', label: 'Inspector', render: r => escapeHtml(userName(r.inspector)) },
+    { key: 'result', label: 'Result', render: r => inspResultBadge(r.result) },
+  ];
+}
+function ncrColumns() {
+  return [
+    { key: 'id', label: 'NCR', render: r => `<span class="mono" style="font-weight:700">${r.id}</span>` },
+    { key: 'eq', label: 'Equipment', render: r => `<span class="link mono">${escapeHtml(EQUIPMENT_BY_ID[r.equipmentId].tag)}</span>` },
+    { key: 'sev', label: 'Severity', render: r => severityBadge(r.severity) },
+    { key: 'detect', label: 'Detected', align: 'right', render: r => `<span class="mono">${dstr(r.detectDate)}</span>` },
+    { key: 'status', label: 'Status', render: r => ncrStatusBadge(r.status) },
+    { key: 'close', label: 'Target Closure', align: 'right', render: r => `<span class="mono" style="${r.status !== 'Closed' && isOverdue(r.targetClosure) ? 'color:var(--bad);font-weight:700' : ''}">${dstr(r.targetClosure)}</span>` },
+  ];
+}
+function dispatchColumns() {
+  return [
+    { key: 'id', label: 'Dispatch', render: r => `<span class="mono">${r.id}</span>` },
+    { key: 'eq', label: 'Equipment', render: r => `<span class="link mono">${escapeHtml(EQUIPMENT_BY_ID[r.equipmentId].tag)}</span>` },
+    { key: 'date', label: 'Dispatch Date', align: 'right', render: r => `<span class="mono">${dstr(r.dispatchDate)}</span>` },
+    { key: 'ref', label: 'Delivery Ref', render: r => `<span class="mono">${escapeHtml(r.deliveryRef)}</span>` },
+    { key: 'status', label: 'Status', render: r => dispatchStatusBadge(r.status) },
+  ];
+}
+
+function lifecycleStepper(steps, current) {
+  const idx = steps.indexOf(current);
+  return `<div class="stepper card card-pad">${steps.map((s, i) => `<div class="step ${i < idx ? 'done' : i === idx ? 'now' : ''}"><span class="sdot"></span>${escapeHtml(s)}</div>`).join('')}</div>`;
+}
+function emptyState(title, text) {
+  return `<div class="empty"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(text)}</p></div>`;
+}
+function emptyInline(text) { return `<div class="table-wrap card"><div class="table-empty">${escapeHtml(text)}</div></div>`; }
+
+function renderAuditList(entries) {
+  if (!entries.length) return emptyInline('No audit events recorded.');
+  return `<div class="card card-pad">${entries.slice(0, 200).map(a => `<div class="audit-row">
+    <div class="at">${dstr(a.ts)}<br>${pad2(new Date(a.ts).getUTCHours())}:${pad2(new Date(a.ts).getUTCMinutes())}</div>
+    <div><div class="ae">${escapeHtml(a.entityType)}</div><div style="font-size:11px" class="mono">${escapeHtml(a.entityId)}</div></div>
+    <div><div class="ae">${escapeHtml(a.action)}</div>${a.details ? `<div class="ad">${escapeHtml(a.details)}</div>` : ''}<div class="aby">${escapeHtml(userName(a.actor))}</div></div>
+  </div>`).join('')}${entries.length > 200 ? `<div style="text-align:center;padding:10px;font-size:11.5px;color:var(--faint)">Showing the most recent 200 of ${entries.length} events.</div>` : ''}</div>`;
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+
+// ============================================================================
+// View renderers, part 2: documents, materials, equipment, quality, NCR,
+// dispatch, reports, notifications, admin, search, traceability.
+// ============================================================================
+
+// ---------------------------------------------------------------- DOCUMENTS
+function viewDocumentsList(p) {
+  const status = p.status || ''; const overdue = p.overdue === '1'; const type = p.type || '';
+  let rows = DOCUMENTS.slice();
+  if (status) { const set = new Set(status.split(',')); rows = rows.filter(r => set.has(r.status)); }
+  if (type) rows = rows.filter(r => r.type === type);
+  if (overdue) rows = rows.filter(r => r.status !== 'Approved' && isOverdue(r.dueDate));
+  const html = [pageHead('Engineering & Documents', 'Document register — every drawing, certificate, procedure and report, with full revision and approval history.')];
+  html.push(`<div class="filters">
+    ${selectFilter('status', 'Status', [...new Set(DOCUMENTS.map(x => x.status))], status)}
+    ${selectFilter('type', 'Type', [...new Set(DOCUMENTS.map(x => x.type))].sort(), type)}
+    <span class="fcount">${rows.length} of ${DOCUMENTS.length} documents</span>
+  </div>`);
+  html.push(renderTable(docColumns(), rows, { rowNav: r => ({ view: 'document-detail', id: r.id }) }));
+  return html.join('');
+}
+function viewDocumentDetail(p) {
+  const doc = DOC_BY_ID[p.id];
+  if (!doc) return emptyState('Document not found', '');
+  const proj = projById[doc.projectId];
+  const html = [];
+  html.push(pageHead(doc.docNumber, `${escapeHtml(doc.title)} · Project <span class="link" ${nav('project-detail', proj.id)}>${escapeHtml(proj.code)}</span>`, `${docStatusBadge(doc.status)}<span class="chip mono">Rev ${doc.revision}</span><span class="chip">${escapeHtml(doc.type)}</span>`));
+  html.push(`<div class="detail-grid"><div>
+    <div class="section-title">Revision &amp; approval history</div>
+    ${renderDocHistory(doc)}
+  </div><div>
+    <div class="card card-pad"><div class="subhead">Document details</div><div class="kv-list">
+      <div class="kv-row"><span class="k">Type</span><span class="v">${escapeHtml(doc.type)}</span></div>
+      <div class="kv-row"><span class="k">Current revision</span><span class="v mono">${doc.revision}</span></div>
+      <div class="kv-row"><span class="k">Status</span><span class="v">${docStatusBadge(doc.status)}</span></div>
+      <div class="kv-row"><span class="k">Due date</span><span class="v mono" style="${doc.status !== 'Approved' && isOverdue(doc.dueDate) ? 'color:var(--bad)' : ''}">${dstr(doc.dueDate)}</span></div>
+      <div class="kv-row"><span class="k">Originator</span><span class="v">${escapeHtml(userName(doc.originator))}</span></div>
+      <div class="kv-row"><span class="k">Document controller</span><span class="v">${escapeHtml(userName(doc.controller))}</span></div>
+      <div class="kv-row"><span class="k">Confidentiality</span><span class="v">${escapeHtml(doc.confidentiality)}</span></div>
+      ${doc.equipmentId ? `<div class="kv-row"><span class="k">Equipment</span><span class="v link mono" ${nav('equipment-detail', doc.equipmentId)}>${escapeHtml(EQUIPMENT_BY_ID[doc.equipmentId].tag)}</span></div>` : ''}
+      <div class="kv-row"><span class="k">PO line</span><span class="v link mono" ${nav('cpo-detail', doc.poId)}>${escapeHtml(CPO_BY_ID[doc.poId].poNumber)} · L${doc.lineNo}</span></div>
+    </div></div>
+    <div class="section-title">Related transmittals</div>
+    <div class="card card-pad">${[...new Set(doc.history.filter(h => h.transmittal).map(h => h.transmittal))].map(tid => `<div class="relrow" ${nav('transmittal-detail', tid)}><span class="mono">${tid}</span>${TRANS_BY_ID[tid] ? badge(TRANS_BY_ID[tid].status, TRANS_BY_ID[tid].status === 'Response Received' ? 'good' : 'warn') : ''}</div>`).join('') || `<div style="color:var(--faint);font-size:12px">None recorded.</div>`}</div>
+  </div></div>`);
+  return html.join('');
+}
+
+function viewTransmittalsList(p) {
+  const rows = TRANSMITTALS.slice().sort((a, b) => b.sentDate - a.sentDate);
+  const html = [pageHead('Transmittals', 'Outgoing submission register — what was sent, to whom, and whether a response has been received.')];
+  html.push(renderTable([
+    { key: 'id', label: 'Transmittal', render: r => `<span class="mono" style="font-weight:700">${r.id}</span>` },
+    { key: 'proj', label: 'Project', render: r => escapeHtml(projectCode(r.projectId)) },
+    { key: 'recipient', label: 'Recipient', render: r => escapeHtml(r.recipient) },
+    { key: 'purpose', label: 'Purpose', render: r => escapeHtml(r.purpose) },
+    { key: 'docs', label: 'Documents', align: 'right', render: r => r.docIds.length },
+    { key: 'sent', label: 'Sent', align: 'right', render: r => `<span class="mono">${dstr(r.sentDate)}</span>` },
+    { key: 'status', label: 'Status', render: r => badge(r.status, r.status === 'Response Received' ? 'good' : isOverdue(r.responseDue) ? 'bad' : 'warn') },
+  ], rows, { rowNav: r => ({ view: 'transmittal-detail', id: r.id }) }));
+  return html.join('');
+}
+function viewTransmittalDetail(p) {
+  const t = TRANS_BY_ID[p.id];
+  if (!t) return emptyState('Transmittal not found', '');
+  const proj = projById[t.projectId];
+  const html = [];
+  html.push(pageHead(t.id, `To ${escapeHtml(t.recipient)} · Project <span class="link" ${nav('project-detail', proj.id)}>${escapeHtml(proj.code)}</span>`, badge(t.status, t.status === 'Response Received' ? 'good' : 'warn')));
+  html.push(`<div class="detail-grid"><div>
+    <div class="section-title">Documents in this transmittal</div>
+    <div class="card card-pad">${t.docIds.map(d => { const doc = DOC_BY_ID[d.docId]; return `<div class="doclist-row" ${nav('document-detail', d.docId)}><div class="main"><div class="t mono">${escapeHtml(doc.docNumber)} <span style="color:var(--faint);font-weight:500">Rev ${d.rev}</span></div><div class="s">${escapeHtml(doc.title)}</div></div>${docStatusBadge(doc.status)}</div>`; }).join('')}</div>
+  </div><div>
+    <div class="card card-pad"><div class="subhead">Transmittal details</div><div class="kv-list">
+      <div class="kv-row"><span class="k">Sender</span><span class="v">${escapeHtml(t.sender)}</span></div>
+      <div class="kv-row"><span class="k">Recipient</span><span class="v">${escapeHtml(t.recipient)}</span></div>
+      <div class="kv-row"><span class="k">Purpose</span><span class="v">${escapeHtml(t.purpose)}</span></div>
+      <div class="kv-row"><span class="k">Sent</span><span class="v mono">${dtstr(t.sentDate)}</span></div>
+      <div class="kv-row"><span class="k">Response due</span><span class="v mono">${dstr(t.responseDue)}</span></div>
+      ${t.responseDate ? `<div class="kv-row"><span class="k">Response received</span><span class="v mono">${dstr(t.responseDate)}</span></div>` : ''}
+    </div></div>
+  </div></div>`);
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- MATERIALS
+function viewMaterialsList(p) {
+  const cert = p.cert || '';
+  let rows = MATERIAL_BATCHES.slice();
+  if (cert) rows = rows.filter(r => r.certStatus === cert);
+  const html = [pageHead('Material Management', 'Material batch register with full genealogy — from goods receipt through to the equipment and weld it was consumed on.')];
+  html.push(`<div class="filters">${selectFilter('cert', 'Certificate', [...new Set(MATERIAL_BATCHES.map(x => x.certStatus))], cert)}<span class="fcount">${rows.length} of ${MATERIAL_BATCHES.length} batches</span></div>`);
+  html.push(renderTable(materialColumns(), rows, { rowNav: r => ({ view: 'material-detail', id: r.id }) }));
+  return html.join('');
+}
+function viewMaterialDetail(p) {
+  const m = MAT_BY_ID[p.id];
+  if (!m) return emptyState('Material batch not found', '');
+  const proj = projById[m.projectId];
+  const html = [];
+  html.push(pageHead(`Heat ${m.heat}`, `Batch ${m.batchNo} · ${escapeHtml(m.grade)} · Project <span class="link" ${nav('project-detail', proj.id)}>${escapeHtml(proj.code)}</span>`, badge(m.certStatus, m.certStatus === 'Verified' ? 'good' : 'warn')));
+  html.push(`<div class="detail-grid"><div>
+    <div class="section-title">Genealogy — consumed on</div>
+    <div class="card card-pad">${m.usage.map(u => { const eq = EQUIPMENT_BY_ID[u.equipmentId]; return `<div class="doclist-row" ${nav('equipment-detail', u.equipmentId)}><div class="main"><div class="t mono">${escapeHtml(eq.tag)}</div><div class="s">${escapeHtml(eq.desc)} · ${u.qty} units · Weld ref ${escapeHtml(u.weldRef)}</div></div>${dispatchStatusBadge(eq.dispatchStatus)}</div>`; }).join('')}</div>
+    <div class="section-title">Audit trail</div>
+    ${renderAuditList(AUDIT_LOG.filter(a => a.entityId === m.id).slice().reverse())}
+  </div><div>
+    <div class="card card-pad"><div class="subhead">Batch details</div><div class="kv-list">
+      <div class="kv-row"><span class="k">Heat number</span><span class="v mono">${escapeHtml(m.heat)}</span></div>
+      <div class="kv-row"><span class="k">Batch number</span><span class="v mono">${escapeHtml(m.batchNo)}</span></div>
+      <div class="kv-row"><span class="k">Grade / specification</span><span class="v">${escapeHtml(m.grade)}</span></div>
+      <div class="kv-row"><span class="k">Supplier</span><span class="v">${escapeHtml(supById[m.supplier].name)}</span></div>
+      <div class="kv-row"><span class="k">Received</span><span class="v mono">${dstr(m.receivedDate)}</span></div>
+      <div class="kv-row"><span class="k">Qty received</span><span class="v">${m.qtyReceived}</span></div>
+      <div class="kv-row"><span class="k">Qty consumed</span><span class="v">${m.qtyConsumed}</span></div>
+      <div class="kv-row"><span class="k">Qty remaining</span><span class="v">${m.qtyRemaining}</span></div>
+      <div class="kv-row"><span class="k">Storage location</span><span class="v">${escapeHtml(m.storageLocation)}</span></div>
+      <div class="kv-row"><span class="k">Certificate status</span><span class="v">${badge(m.certStatus, m.certStatus === 'Verified' ? 'good' : 'warn')}</span></div>
+    </div></div>
+  </div></div>`);
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- MANUFACTURING TRACKER
+function viewEquipmentList(p) {
+  const category = p.category || ''; const dispatch = p.dispatch || ''; const hold = p.hold === '1';
+  let rows = EQUIPMENT.slice();
+  if (category) rows = rows.filter(r => r.category === category);
+  if (dispatch) rows = rows.filter(r => r.dispatchStatus === dispatch);
+  if (hold) rows = rows.filter(r => r.qualityHold);
+  const sortKey = p.sortKey || null, sortDir = p.sortDir || 'asc';
+  if (sortKey) rows = sortRows(rows, sortKey, sortDir, (r, k) => k === 'progress' ? r.currentStageIdx : r[k]);
+  const html = [pageHead('Manufacturing Tracker', 'Individual equipment traceability — one record per manufactured item, with its full 22-stage history, documents, material genealogy and quality status.')];
+  html.push(`<div class="filters">
+    ${selectFilter('category', 'Category', [...new Set(EQUIPMENT.map(x => x.category))], category)}
+    ${selectFilter('dispatch', 'Dispatch', [...new Set(EQUIPMENT.map(x => x.dispatchStatus))], dispatch)}
+    <span class="fcount">${rows.length} of ${EQUIPMENT.length} items</span>
+  </div>`);
+  html.push(renderTable(equipmentColumns().map(c => c.key === 'progress' ? { ...c, sortable: true } : c), rows, { rowNav: r => ({ view: 'equipment-detail', id: r.id }), sortKey, sortDir }));
+  return html.join('');
+}
+
+const EQUIPMENT_TABS = [
+  { key: 'timeline', label: 'Stage Timeline' }, { key: 'documents', label: 'Documents' },
+  { key: 'materials', label: 'Materials' }, { key: 'quality', label: 'Quality' }, { key: 'dossier', label: 'Dossier' },
+  { key: 'audit', label: 'Audit History' },
+];
+function viewEquipmentDetail(p) {
+  const eq = EQUIPMENT_BY_ID[p.id];
+  if (!eq) return emptyState('Equipment not found', '');
+  const tab = p.tab || 'timeline';
+  const proj = projById[eq.projectId];
+  const cpo = CPO_BY_ID[eq.poId];
+  const line = cpo.lines.find(l => l.lineNo === eq.lineNo);
+  const docs = DOCUMENTS.filter(d => d.equipmentId === eq.id);
+  const mats = MATERIAL_BATCHES.filter(m => eq.materialBatchIds.includes(m.id));
+  const insps = INSPECTIONS.filter(i => i.equipmentId === eq.id);
+  const ncr = eq.ncrId ? NCR_BY_ID[eq.ncrId] : null;
+
+  const html = [];
+  html.push(pageHead(eq.tag, `${escapeHtml(eq.desc)} · ${escapeHtml(eq.category)} · Project <span class="link" ${nav('project-detail', proj.id)}>${escapeHtml(proj.code)}</span>`,
+    `${dispatchStatusBadge(eq.dispatchStatus)}${eq.qualityHold ? badge('Quality Hold', 'bad') : ''}<span class="chip mono">${eq.serial}</span>`));
+  html.push(`<div style="display:flex;justify-content:flex-end;margin:-8px 0 10px"><span class="link" style="font-size:12px;display:inline-flex;align-items:center;gap:5px" ${nav('traceability', eq.id)}>${icon('external')} View full traceability chain</span></div>`);
+
+  html.push(`<div class="detail-grid"><div>`);
+  html.push(renderTabs(EQUIPMENT_TABS.map(t => ({ ...t, count: ({ documents: docs.length, materials: mats.length, quality: insps.length, timeline: null, dossier: null, audit: null })[t.key] })), tab));
+
+  if (tab === 'timeline') {
+    html.push(renderStageTimeline(eq));
+  } else if (tab === 'documents') {
+    html.push(renderTable(docColumns(), docs, { rowNav: r => ({ view: 'document-detail', id: r.id }) }));
+  } else if (tab === 'materials') {
+    html.push(renderTable(materialColumns(), mats, { rowNav: r => ({ view: 'material-detail', id: r.id }) }));
+  } else if (tab === 'quality') {
+    html.push(sectionTitle('Inspections'));
+    html.push(renderTable(inspectionColumns(), insps, { rowNav: r => ({ view: 'inspection-detail', id: r.id }) }));
+    if (ncr) { html.push(sectionTitle('Non-conformance report')); html.push(renderTable(ncrColumns(), [ncr], { rowNav: r => ({ view: 'ncr-detail', id: r.id }) })); }
+  } else if (tab === 'dossier') {
+    const d = dossierCompleteness(eq);
+    html.push(`<div class="card card-pad"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span class="progress-bar" style="flex:1"><i style="width:${d.pct}%"></i></span><span class="mono" style="font-weight:700">${d.pct}%</span></div>
+      ${d.items.map(i => `<div class="dossier-item ${i.present ? 'present' : 'missing'}">${icon(i.present ? 'check' : 'x')}${escapeHtml(i.req)}<span style="margin-left:auto;font-size:10.5px">${i.present ? 'Present — Approved' : 'Missing'}</span></div>`).join('')}
+      <div style="font-size:11px;color:var(--faint);margin-top:10px">Dossier is not complete until every required document is present and approved. ${d.pct < 100 ? 'Not eligible for final handover yet.' : 'All required documents present — eligible for handover package.'}</div>
+    </div>`);
+  } else if (tab === 'audit') {
+    html.push(renderAuditList(AUDIT_LOG.filter(a => a.entityId === eq.id).slice().reverse()));
+  }
+  html.push(`</div><div>`);
+  html.push(renderQr(eq));
+  html.push(`<div class="card card-pad"><div class="subhead">Equipment details</div><div class="kv-list">
+    <div class="kv-row"><span class="k">Serial number</span><span class="v mono">${eq.serial}</span></div>
+    <div class="kv-row"><span class="k">Customer PO</span><span class="v link mono" ${nav('cpo-detail', cpo.id)}>${escapeHtml(cpo.poNumber)}</span></div>
+    <div class="kv-row"><span class="k">PO line</span><span class="v">L${eq.lineNo}</span></div>
+    <div class="kv-row"><span class="k">Drawing</span><span class="v mono">${escapeHtml(eq.drawingRef)} Rev ${eq.drawingRev}</span></div>
+    <div class="kv-row"><span class="k">Material grade</span><span class="v">${escapeHtml(line.material || mats[0]?.grade || '—')}</span></div>
+    <div class="kv-row"><span class="k">Facility</span><span class="v">${escapeHtml(eq.facility)}</span></div>
+    <div class="kv-row"><span class="k">Planned start / finish</span><span class="v mono">${dstr(eq.plannedStart)} – ${dstr(eq.plannedFinish)}</span></div>
+    <div class="kv-row"><span class="k">Actual start</span><span class="v mono">${dstr(eq.actualStart)}</span></div>
+    ${eq.actualFinish ? `<div class="kv-row"><span class="k">Actual finish</span><span class="v mono">${dstr(eq.actualFinish)}</span></div>` : ''}
+    <div class="kv-row"><span class="k">Production owner</span><span class="v">${escapeHtml(userName(eq.owner))}</span></div>
+    <div class="kv-row"><span class="k">Planned dispatch</span><span class="v mono">${dstr(eq.plannedDispatch)}</span></div>
+    ${eq.actualDispatch ? `<div class="kv-row"><span class="k">Actual dispatch</span><span class="v mono">${dstr(eq.actualDispatch)}</span></div>` : ''}
+  </div></div>`);
+  html.push(`</div></div>`);
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- INSPECTIONS
+function viewInspectionsList(p) {
+  const result = p.result || ''; const type = p.type || '';
+  let rows = INSPECTIONS.slice();
+  if (result) rows = rows.filter(r => r.result === result);
+  if (type) rows = rows.filter(r => r.type === type);
+  const html = [pageHead('Inspection & Quality', 'Inspection and test register across all equipment — plans, requests, results and release decisions.')];
+  html.push(`<div class="filters">
+    ${selectFilter('result', 'Result', [...new Set(INSPECTIONS.map(x => x.result))], result)}
+    ${selectFilter('type', 'Type', [...new Set(INSPECTIONS.map(x => x.type))], type)}
+    <span class="fcount">${rows.length} of ${INSPECTIONS.length} inspections</span>
+  </div>`);
+  html.push(renderTable(inspectionColumns(), rows, { rowNav: r => ({ view: 'inspection-detail', id: r.id }) }));
+  return html.join('');
+}
+function viewInspectionDetail(p) {
+  const insp = INSP_BY_ID[p.id];
+  if (!insp) return emptyState('Inspection not found', '');
+  const eq = EQUIPMENT_BY_ID[insp.equipmentId];
+  const html = [];
+  html.push(pageHead(insp.id, `${escapeHtml(insp.type)} · Equipment <span class="link" ${nav('equipment-detail', eq.id)}>${escapeHtml(eq.tag)}</span>`, inspResultBadge(insp.result)));
+  html.push(`<div class="detail-grid"><div>
+    <div class="card card-pad"><div class="subhead">Observations</div><p style="font-size:12.8px">${escapeHtml(insp.observations)}</p>
+      <div class="subhead" style="margin-top:14px">Acceptance criteria</div><p style="font-size:12.8px;color:var(--muted)">${escapeHtml(insp.acceptanceCriteria)}</p>
+    </div>
+    ${insp.ncrId ? `<div class="section-title">Linked NCR</div>${renderTable(ncrColumns(), [NCR_BY_ID[insp.ncrId]], { rowNav: r => ({ view: 'ncr-detail', id: r.id }) })}` : ''}
+  </div><div>
+    <div class="card card-pad"><div class="subhead">Inspection details</div><div class="kv-list">
+      <div class="kv-row"><span class="k">Type</span><span class="v">${escapeHtml(insp.type)}</span></div>
+      <div class="kv-row"><span class="k">Requested</span><span class="v mono">${dstr(insp.requestDate)}</span></div>
+      <div class="kv-row"><span class="k">Planned</span><span class="v mono">${dstr(insp.plannedDate)}</span></div>
+      <div class="kv-row"><span class="k">Actual</span><span class="v mono">${dstr(insp.actualDate)}</span></div>
+      <div class="kv-row"><span class="k">Inspector</span><span class="v">${escapeHtml(userName(insp.inspector))}</span></div>
+      <div class="kv-row"><span class="k">Witness</span><span class="v">${escapeHtml(insp.witness || '—')}</span></div>
+      <div class="kv-row"><span class="k">Result</span><span class="v">${inspResultBadge(insp.result)}</span></div>
+    </div></div>
+  </div></div>`);
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- NCRs
+function viewNcrList(p) {
+  const status = p.status === 'open' ? 'open' : (p.status || '');
+  let rows = NCRS.slice();
+  if (status === 'open') rows = rows.filter(r => r.status !== 'Closed');
+  else if (status) rows = rows.filter(r => r.status === status);
+  const html = [pageHead('Non-Conformances', 'NCR and corrective-action register — containment, disposition, rework and closure, linked back to the originating inspection.')];
+  html.push(`<div class="filters">${selectFilter('status', 'Status', [...new Set(NCRS.map(x => x.status))], status === 'open' ? '' : status)}<span class="fcount">${rows.length} of ${NCRS.length} NCRs</span></div>`);
+  html.push(renderTable(ncrColumns(), rows, { rowNav: r => ({ view: 'ncr-detail', id: r.id }) }));
+  return html.join('');
+}
+function viewNcrDetail(p) {
+  const n = NCR_BY_ID[p.id];
+  if (!n) return emptyState('NCR not found', '');
+  const eq = EQUIPMENT_BY_ID[n.equipmentId];
+  const steps = ['Open', 'Containment', 'Disposition Review', 'Rework/Repair', 'Reinspection', 'Closure Review', 'Closed'];
+  const effStatus = n.status === 'Disposition Review' ? 'Disposition Review' : n.status;
+  const html = [];
+  html.push(pageHead(n.id, `Equipment <span class="link" ${nav('equipment-detail', eq.id)}>${escapeHtml(eq.tag)}</span> · ${escapeHtml(proj_code_for(n.projectId))}`, `${ncrStatusBadge(n.status)}${severityBadge(n.severity)}`));
+  html.push(`<div class="detail-grid"><div>
+    ${lifecycleStepper(steps, n.status === 'Closed' ? 'Closed' : effStatus)}
+    <div class="card card-pad"><div class="subhead">Description</div><p style="font-size:12.8px">${escapeHtml(n.description)}</p>
+      <div class="subhead" style="margin-top:12px">Containment</div><p style="font-size:12.8px;color:var(--muted)">${escapeHtml(n.containment)}</p>
+      ${n.disposition ? `<div class="subhead" style="margin-top:12px">Disposition</div><p style="font-size:12.8px;color:var(--muted)">${escapeHtml(n.disposition)}</p>` : ''}
+      ${n.rootCause ? `<div class="subhead" style="margin-top:12px">Root cause</div><p style="font-size:12.8px;color:var(--muted)">${escapeHtml(n.rootCause)}</p>` : ''}
+      ${n.correctiveAction ? `<div class="subhead" style="margin-top:12px">Corrective action</div><p style="font-size:12.8px;color:var(--muted)">${escapeHtml(n.correctiveAction)}</p>` : ''}
+    </div>
+    <div class="section-title">Audit trail</div>
+    ${renderAuditList(AUDIT_LOG.filter(a => a.entityId === n.id).slice().reverse())}
+  </div><div>
+    <div class="card card-pad"><div class="subhead">NCR details</div><div class="kv-list">
+      <div class="kv-row"><span class="k">Severity</span><span class="v">${severityBadge(n.severity)}</span></div>
+      <div class="kv-row"><span class="k">Originating dept.</span><span class="v">${escapeHtml(n.dept)}</span></div>
+      <div class="kv-row"><span class="k">Detected</span><span class="v mono">${dstr(n.detectDate)}</span></div>
+      <div class="kv-row"><span class="k">Responsible</span><span class="v">${escapeHtml(userName(n.responsible))}</span></div>
+      <div class="kv-row"><span class="k">Target closure</span><span class="v mono" style="${n.status !== 'Closed' && isOverdue(n.targetClosure) ? 'color:var(--bad)' : ''}">${dstr(n.targetClosure)}</span></div>
+      ${n.actualClosure ? `<div class="kv-row"><span class="k">Actual closure</span><span class="v mono">${dstr(n.actualClosure)}</span></div>` : ''}
+    </div></div>
+  </div></div>`);
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- DISPATCH
+function viewDispatchList(p) {
+  const status = p.status || '';
+  let rows = DISPATCH_RECORDS.slice();
+  if (status) rows = rows.filter(r => r.status === status);
+  const html = [pageHead('Dispatch & Delivery', 'Shipment register — dispatch authorization, delivery note reference and customer acknowledgement.')];
+  html.push(`<div class="filters">${selectFilter('status', 'Status', [...new Set(DISPATCH_RECORDS.map(x => x.status))], status)}<span class="fcount">${rows.length} of ${DISPATCH_RECORDS.length} shipments</span></div>`);
+  html.push(renderTable(dispatchColumns(), rows, { rowNav: r => ({ view: 'dispatch-detail', id: r.id }) }));
+  return html.join('');
+}
+function viewDispatchDetail(p) {
+  const d = DISP_BY_ID[p.id];
+  if (!d) return emptyState('Dispatch record not found', '');
+  const eq = EQUIPMENT_BY_ID[d.equipmentId];
+  const html = [];
+  html.push(pageHead(d.id, `Equipment <span class="link" ${nav('equipment-detail', eq.id)}>${escapeHtml(eq.tag)}</span>`, dispatchStatusBadge(d.status)));
+  html.push(`<div class="detail-grid"><div>
+    <div class="card card-pad"><div class="subhead">Quality release</div><p style="font-size:12.8px">${escapeHtml(d.qualityReleaseRef)}</p></div>
+    <div class="section-title">Audit trail</div>
+    ${renderAuditList(AUDIT_LOG.filter(a => a.entityId === d.id).slice().reverse())}
+  </div><div>
+    <div class="card card-pad"><div class="subhead">Dispatch details</div><div class="kv-list">
+      <div class="kv-row"><span class="k">Dispatch date</span><span class="v mono">${dstr(d.dispatchDate)}</span></div>
+      <div class="kv-row"><span class="k">Delivery reference</span><span class="v mono">${escapeHtml(d.deliveryRef)}</span></div>
+      <div class="kv-row"><span class="k">Status</span><span class="v">${dispatchStatusBadge(d.status)}</span></div>
+      ${d.ackDate ? `<div class="kv-row"><span class="k">Delivery acknowledged</span><span class="v mono">${dstr(d.ackDate)}</span></div>` : `<div class="kv-row"><span class="k">Delivery acknowledgement</span><span class="v" style="color:var(--faint)">Awaiting customer sign-off</span></div>`}
+    </div></div>
+  </div></div>`);
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- REPORTS
+const REPORT_DEFS = [
+  { id: 'master-projects', name: 'Master Project Register', view: 'projects-list', extra: {} },
+  { id: 'cpo-status', name: 'Customer PO Status', view: 'cpo-list', extra: {} },
+  { id: 'ppo-status', name: 'Procurement PO Status', view: 'ppo-list', extra: {} },
+  { id: 'supplier-perf', name: 'Supplier Delivery Performance', view: 'ppo-list', extra: { overdue: '1' } },
+  { id: 'doc-register', name: 'Document Register', view: 'documents-list', extra: {} },
+  { id: 'doc-overdue', name: 'Document Overdue Register', view: 'documents-list', extra: { overdue: '1' } },
+  { id: 'transmittal-register', name: 'Transmittal Register', view: 'transmittals-list', extra: {} },
+  { id: 'equip-tracker', name: 'Equipment Manufacturing Tracker', view: 'equipment-list', extra: {} },
+  { id: 'mat-genealogy', name: 'Material Traceability & Genealogy', view: 'materials-list', extra: {} },
+  { id: 'mat-cert', name: 'Material Certificate Completeness', view: 'materials-list', extra: { cert: 'Pending Verification' } },
+  { id: 'insp-register', name: 'Inspection & Test Register', view: 'inspections-list', extra: {} },
+  { id: 'ncr-register', name: 'NCR Register', view: 'ncr-list', extra: {} },
+  { id: 'dispatch-register', name: 'Dispatch & Delivery Register', view: 'dispatch-list', extra: {} },
+  { id: 'milestone-perf', name: 'Project Milestone Performance', view: 'projects-list', extra: {} },
+  { id: 'user-activity', name: 'User Activity & Audit History', view: 'admin', extra: { tab: 'audit' } },
+];
+function viewReportsList(p) {
+  const html = [pageHead('Reports & Analytics', 'Filterable registers behind every dashboard metric. Each report opens the live, permission-scoped record list — export to CSV/Excel or PDF from there.')];
+  html.push(`<div class="two-col-list">` + REPORT_DEFS.map(r => `<div class="card card-pad" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" ${nav(r.view, null, r.extra)}><span>${escapeHtml(r.name)}</span>${icon('chevron', 'mono')}</div>`).join('') + `</div>`);
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- NOTIFICATIONS
+function viewNotificationsList(p) {
+  const notifs = computeNotifications();
+  const html = [pageHead('Notifications', 'Rule-based alerts computed from current record status — due dates, overdue items, holds and pending releases.')];
+  html.push(`<div class="banner info">${icon('info')}<div><b>Email delivery is not configured in this demo.</b> Notifications are shown in-app only; no SMTP or messaging provider is connected, so nothing is actually emailed.</div></div>`);
+  if (!notifs.length) html.push(emptyState('All clear', 'No active alerts right now.'));
+  else html.push(`<div class="card card-pad">${notifs.map(n => `<div class="notif-item" ${nav(n.nav.view, n.nav.id, n.nav.extra)}>
+    <span class="nsev ${n.sev}"></span>
+    <div style="flex:1"><div class="ncat">${escapeHtml(n.cat)}</div><div class="ntxt">${escapeHtml(n.text)}</div></div>
+    <span class="ntime">${dstr(n.ts)}</span>
+  </div>`).join('')}</div>`);
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- ADMIN
+const ADMIN_TABS = [{ key: 'users', label: 'Users & Roles' }, { key: 'audit', label: 'Audit Trail' }, { key: 'config', label: 'Numbering & Configuration' }, { key: 'env', label: 'Environment Status' }];
+function viewAdmin(p) {
+  const tab = p.tab || 'users';
+  const html = [pageHead('Administration & Audit', 'User roles, the append-only audit ledger, configurable numbering, and the status of external integrations.')];
+  html.push(renderTabs(ADMIN_TABS, tab));
+  if (tab === 'users') {
+    html.push(sectionTitle('Active users in this demo'));
+    html.push(`<div class="two-col-list">` + USERS.map(u => `<div class="card role-card"><div class="rn">${escapeHtml(u.name)}</div><div class="rd">${escapeHtml(u.role)} · ${escapeHtml(u.dept)}</div></div>`).join('') + `</div>`);
+    html.push(sectionTitle('Full role catalogue', 'Scoped by project, facility, department and record type; separation of duties enforced for commercial, technical and quality approvals'));
+    html.push(`<div class="two-col-list">` + ROLE_CATALOG.map(r => `<div class="card role-card"><div class="rn">${escapeHtml(r.role)}</div><div class="rd">${escapeHtml(r.desc)}</div></div>`).join('') + `</div>`);
+  } else if (tab === 'audit') {
+    html.push(sectionTitle('Full audit ledger', `${fmtInt(AUDIT_LOG.length)} append-only events across every module`));
+    html.push(renderAuditList(AUDIT_LOG.slice().reverse()));
+  } else if (tab === 'config') {
+    html.push(sectionTitle('Document categories'));
+    html.push(`<div class="chip-row">${DOC_TYPES.map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('')}</div>`);
+    html.push(sectionTitle('Manufacturing route — 22 configurable stages'));
+    html.push(`<div class="card card-pad">${STAGE_DEFS.map((s, i) => `<div class="kv-row"><span class="k">${i + 1}. ${escapeHtml(s)}</span><span class="v" style="color:var(--faint);font-weight:500">${escapeHtml(STAGE_PHASE(i))}</span></div>`).join('')}</div>`);
+    html.push(sectionTitle('Numbering conventions'));
+    html.push(`<div class="card card-pad kv-list">
+      <div class="kv-row"><span class="k">Customer PO</span><span class="v mono">PO-&lt;Customer&gt;-&lt;Year&gt;-&lt;Seq&gt;</span></div>
+      <div class="kv-row"><span class="k">Procurement PO</span><span class="v mono">STS-PPO-&lt;Year&gt;-&lt;Seq&gt;</span></div>
+      <div class="kv-row"><span class="k">Document</span><span class="v mono">STS-&lt;ProjectCode&gt;-&lt;Discipline&gt;-&lt;Seq&gt;</span></div>
+      <div class="kv-row"><span class="k">Equipment serial</span><span class="v mono">STS/&lt;Year&gt;/&lt;Seq&gt;</span></div>
+      <div class="kv-row"><span class="k">NCR</span><span class="v mono">NCR-&lt;Seq&gt;</span></div>
+    </div>`);
+  } else if (tab === 'env') {
+    html.push(`<div class="banner warn">${icon('alert')}<div><b>This is a UI simulator, not a connected system.</b> Everything below reflects the design brief's own requirement not to claim an integration that isn't actually in place.</div></div>`);
+    html.push(`<div class="card card-pad">
+      ${envRow('ERP interface', 'Not configured — awaiting STS confirmation of source ERP and integration scope.')}
+      ${envRow('SMTP / email provider', 'Not configured — in-app notifications only.')}
+      ${envRow('Identity provider / SSO', 'Not configured — demo identity shown is illustrative.')}
+      ${envRow('Object storage (attachments)', 'Not configured — this simulator does not store real files.')}
+      ${envRow('Timestamp standard', 'All events stored in UTC, displayed in Asia/Muscat (UTC+04:00).', true)}
+    </div>`);
+  }
+  return html.join('');
+}
+function envRow(label, text, ok) {
+  return `<div class="statusrow" style="margin-bottom:8px"><div><div style="font-weight:700">${escapeHtml(label)}</div><div style="font-size:11.3px;color:var(--muted)">${escapeHtml(text)}</div></div>${badge(ok ? 'Active' : 'Not Configured', ok ? 'good' : 'muted')}</div>`;
+}
+
+// ---------------------------------------------------------------- SEARCH
+function viewSearchResults(p) {
+  const q = p.q || '';
+  const results = searchEntities(q);
+  const html = [pageHead('Search', q ? `Results for "${escapeHtml(q)}"` : 'Enter a search term to look across every project, PO, document, equipment item, material batch, inspection and NCR.')];
+  if (q && !results.length) html.push(emptyState('No matches', `Nothing found for "${q}". Try an ID, tag, PO number or heat number.`));
+  else if (results.length) {
+    const groups = {};
+    for (const r of results) (groups[r.type] = groups[r.type] || []).push(r);
+    for (const [type, items] of Object.entries(groups)) {
+      html.push(sectionTitle(`${type} (${items.length})`));
+      html.push(`<div class="card card-pad">${items.map(it => `<div class="relrow" ${nav(it.nav.view, it.nav.id, it.nav.extra)}><div><span class="mono" style="font-weight:700">${escapeHtml(it.label)}</span><div style="font-size:11px;color:var(--muted)">${escapeHtml(it.sub)}</div></div>${icon('chevron', 'mono')}</div>`).join('')}</div>`);
+    }
+  }
+  return html.join('');
+}
+
+// ---------------------------------------------------------------- TRACEABILITY CHAIN
+function viewTraceability(p) {
+  const eq = EQUIPMENT_BY_ID[p.id];
+  if (!eq) return emptyState('Equipment not found', '');
+  const proj = projById[eq.projectId];
+  const cpo = CPO_BY_ID[eq.poId];
+  const line = cpo.lines.find(l => l.lineNo === eq.lineNo);
+  const docs = DOCUMENTS.filter(d => d.equipmentId === eq.id);
+  const mats = MATERIAL_BATCHES.filter(m => eq.materialBatchIds.includes(m.id));
+  const insps = INSPECTIONS.filter(i => i.equipmentId === eq.id);
+  const ncr = eq.ncrId ? NCR_BY_ID[eq.ncrId] : null;
+  const disp = DISPATCH_RECORDS.find(d => d.equipmentId === eq.id);
+  const dossier = dossierCompleteness(eq);
+
+  const rows = [
+    { label: 'Project', cards: [cardFor(proj.name, proj.code, { view: 'project-detail', id: proj.id })] },
+    { label: 'Customer PO', cards: [cardFor(cpo.poNumber, custById[cpo.customerId].short, { view: 'cpo-detail', id: cpo.id })] },
+    { label: `PO Line ${line.lineNo}`, cards: [cardFor(line.tag, line.desc, { view: 'cpo-detail', id: cpo.id })] },
+    { label: 'Equipment Item', cards: [cardFor(eq.tag, eq.serial, { view: 'equipment-detail', id: eq.id })] },
+    { label: `Engineering Documents (${docs.length})`, cards: docs.map(d => cardFor(d.docNumber, d.status, { view: 'document-detail', id: d.id })) },
+    { label: `Material Batches (${mats.length})`, cards: mats.map(m => cardFor(`Heat ${m.heat}`, m.certStatus, { view: 'material-detail', id: m.id })) },
+    { label: 'Manufacturing Operations', cards: [cardFor(`Stage ${eq.currentStageIdx + 1} of 22`, STAGE_DEFS[eq.currentStageIdx], { view: 'equipment-detail', id: eq.id, extra: { tab: 'timeline' } })] },
+    { label: `Inspection Records (${insps.length})`, cards: insps.map(i => cardFor(i.id, `${i.type} — ${i.result}`, { view: 'inspection-detail', id: i.id })) },
+    { label: ncr ? 'NCR' : 'NCR', cards: ncr ? [cardFor(ncr.id, ncr.status, { view: 'ncr-detail', id: ncr.id })] : [cardFor('None raised', 'No quality non-conformance on this item', null)] },
+    { label: 'Manufacturing Dossier', cards: [cardFor(`${dossier.pct}% complete`, dossier.pct === 100 ? 'Ready for handover' : 'Documents still missing', { view: 'equipment-detail', id: eq.id, extra: { tab: 'dossier' } })] },
+    { label: 'Dispatch & Delivery', cards: [disp ? cardFor(disp.deliveryRef, disp.status, { view: 'dispatch-detail', id: disp.id }) : cardFor(eq.dispatchStatus, 'Not yet dispatched', null)] },
+  ];
+  function cardFor(t, s, target) {
+    return `<div class="chain-card" ${target ? nav(target.view, target.id, target.extra) : ''} style="${target ? '' : 'cursor:default;color:var(--faint)'}"><div class="cc-t">${escapeHtml(t)}</div><div class="cc-s">${escapeHtml(s)}</div></div>`;
+  }
+  const html = [];
+  html.push(pageHead('Traceability Chain', `Full forward chain for ${escapeHtml(eq.tag)} — project through to dispatch. Any document, material or inspection can also be traced back to this equipment item from its own record.`));
+  html.push(`<div class="chain">${rows.map((r, i) => `<div class="chain-row"><div class="chain-rail"><span class="cdot"></span>${i < rows.length - 1 ? '<span class="cline"></span>' : ''}</div><div class="chain-body"><div class="chain-label">${escapeHtml(r.label)}</div><div class="chain-cards">${r.cards.join('')}</div></div></div>`).join('')}</div>`);
+  return html.join('');
+}
+
+
+// ============================================================================
+// Router / boot script. Owns navStack, the sidebar, global search, the
+// notification bell, and all event delegation (nav / crumb / tab / filter /
+// sort / search). Runs after datagen.js, derived.js, app.js, views.js and
+// views2.js have all been evaluated.
+// ============================================================================
+
+const SEARCH_INDEX = buildSearchIndex();
+const CURRENT_USER = userById['U14']; // System Administrator — sees every module
+
+const VIEWS = {
+  'dashboard': { render: viewDashboard },
+  'projects-list': { render: viewProjectsList },
+  'project-detail': { render: viewProjectDetail },
+  'cpo-list': { render: viewCpoList },
+  'cpo-detail': { render: viewCpoDetail },
+  'ppo-list': { render: viewPpoList },
+  'ppo-detail': { render: viewPpoDetail },
+  'documents-list': { render: viewDocumentsList },
+  'document-detail': { render: viewDocumentDetail },
+  'transmittals-list': { render: viewTransmittalsList },
+  'transmittal-detail': { render: viewTransmittalDetail },
+  'materials-list': { render: viewMaterialsList },
+  'material-detail': { render: viewMaterialDetail },
+  'equipment-list': { render: viewEquipmentList },
+  'equipment-detail': { render: viewEquipmentDetail },
+  'inspections-list': { render: viewInspectionsList },
+  'inspection-detail': { render: viewInspectionDetail },
+  'ncr-list': { render: viewNcrList },
+  'ncr-detail': { render: viewNcrDetail },
+  'dispatch-list': { render: viewDispatchList },
+  'dispatch-detail': { render: viewDispatchDetail },
+  'reports-list': { render: viewReportsList },
+  'notifications-list': { render: viewNotificationsList },
+  'admin': { render: viewAdmin },
+  'search-results': { render: viewSearchResults },
+  'traceability': { render: viewTraceability },
+};
+
+const SIDEBAR = [
+  { view: 'dashboard', label: 'Executive Dashboard', ic: 'dashboard' },
+  { view: 'projects-list', label: 'Projects', ic: 'projects' },
+  { view: 'cpo-list', label: 'Customer POs', ic: 'cpo' },
+  { view: 'ppo-list', label: 'Procurement POs', ic: 'ppo' },
+  { view: 'documents-list', label: 'Engineering & Documents', ic: 'docs' },
+  { view: 'materials-list', label: 'Material Management', ic: 'materials' },
+  { view: 'equipment-list', label: 'Manufacturing Tracker', ic: 'tracker' },
+  { view: 'inspections-list', label: 'Inspection & Quality', ic: 'quality' },
+  { view: 'ncr-list', label: 'Non-Conformances', ic: 'ncr' },
+  { view: 'dispatch-list', label: 'Dispatch & Delivery', ic: 'dispatch' },
+  { view: 'reports-list', label: 'Reports & Analytics', ic: 'reports' },
+  { view: 'notifications-list', label: 'Notifications', ic: 'bell' },
+  { view: 'admin', label: 'Administration & Audit', ic: 'admin' },
+];
+
+function sidebarCount(view) {
+  if (view === 'documents-list') return DOCUMENTS.filter(d => d.status !== 'Approved' && isOverdue(d.dueDate)).length;
+  if (view === 'ncr-list') return NCRS.filter(n => n.status !== 'Closed').length;
+  if (view === 'ppo-list') return PROCUREMENT_POS.filter(p => p.status !== 'Closed' && p.status !== 'Material Release' && isOverdue(p.revisedPromisedDate || p.promisedDate)).length;
+  if (view === 'notifications-list') return computeNotifications().length;
+  return 0;
+}
+
+function titleFor(view, params) {
+  params = params || {};
+  switch (view) {
+    case 'dashboard': return 'Dashboard';
+    case 'projects-list': return 'Projects';
+    case 'project-detail': return projById[params.id] ? projById[params.id].code : 'Project';
+    case 'cpo-list': return 'Customer POs';
+    case 'cpo-detail': return CPO_BY_ID[params.id] ? CPO_BY_ID[params.id].poNumber : 'PO';
+    case 'ppo-list': return 'Procurement POs';
+    case 'ppo-detail': return PPO_BY_ID[params.id] ? PPO_BY_ID[params.id].poNumber : 'PO';
+    case 'documents-list': return 'Documents';
+    case 'document-detail': return DOC_BY_ID[params.id] ? DOC_BY_ID[params.id].docNumber : 'Document';
+    case 'transmittals-list': return 'Transmittals';
+    case 'transmittal-detail': return params.id || 'Transmittal';
+    case 'materials-list': return 'Materials';
+    case 'material-detail': return MAT_BY_ID[params.id] ? `Heat ${MAT_BY_ID[params.id].heat}` : 'Material';
+    case 'equipment-list': return 'Manufacturing Tracker';
+    case 'equipment-detail': return EQUIPMENT_BY_ID[params.id] ? EQUIPMENT_BY_ID[params.id].tag : 'Equipment';
+    case 'inspections-list': return 'Inspections';
+    case 'inspection-detail': return params.id || 'Inspection';
+    case 'ncr-list': return 'NCRs';
+    case 'ncr-detail': return params.id || 'NCR';
+    case 'dispatch-list': return 'Dispatch';
+    case 'dispatch-detail': return params.id || 'Dispatch';
+    case 'reports-list': return 'Reports';
+    case 'notifications-list': return 'Notifications';
+    case 'admin': return 'Admin';
+    case 'search-results': return params.q ? `Search results` : 'Search';
+    case 'traceability': return EQUIPMENT_BY_ID[params.id] ? `Traceability — ${EQUIPMENT_BY_ID[params.id].tag}` : 'Traceability';
+    default: return view;
+  }
+}
+
+// ---------------------------------------------------------------- nav state
+let navStack = [{ view: 'dashboard', params: {}, title: 'Dashboard' }];
+
+function navigate(view, id, extra) {
+  const params = Object.assign({}, id != null ? { id } : {}, extra || {});
+  navStack.push({ view, params, title: titleFor(view, params) });
+  render();
+}
+function navigateModule(view) {
+  navStack = [{ view, params: {}, title: titleFor(view, {}) }];
+  render();
+}
+function goToCrumb(i) {
+  navStack = navStack.slice(0, i + 1);
+  render();
+}
+function updateTopParams(patch) {
+  const top = navStack[navStack.length - 1];
+  Object.keys(patch).forEach(k => {
+    if (patch[k] === undefined || patch[k] === '') delete top.params[k];
+    else top.params[k] = patch[k];
+  });
+  top.title = titleFor(top.view, top.params);
+  render();
+}
+
+// ---------------------------------------------------------------- render
+function render() {
+  const top = navStack[navStack.length - 1];
+  const def = VIEWS[top.view];
+  let html;
+  try {
+    html = def ? def.render(top.params) : emptyState('Page not found', `No view is registered for "${top.view}".`);
+  } catch (err) {
+    html = emptyState('Something went wrong rendering this page', (err && err.message) ? err.message : String(err));
+  }
+  const vp = document.getElementById('viewport');
+  vp.innerHTML = html;
+  vp.scrollTop = 0;
+  document.getElementById('breadcrumb').innerHTML = renderBreadcrumb();
+  const moduleKey = navStack[0].view;
+  document.querySelectorAll('#sidebarnav .navitem').forEach(el => el.classList.toggle('active', el.getAttribute('data-sidebar') === moduleKey));
+  refreshNotifBadge();
+}
+
+function refreshNotifBadge() {
+  const n = computeNotifications().length;
+  const dot = document.getElementById('notifdot');
+  if (!dot) return;
+  if (n > 0) { dot.hidden = false; dot.textContent = n > 99 ? '99+' : String(n); }
+  else dot.hidden = true;
+}
+
+// ---------------------------------------------------------------- sidebar / identity
+function renderSidebarNav() {
+  return SIDEBAR.map(s => {
+    const c = sidebarCount(s.view);
+    return `<div class="navitem" data-sidebar="${s.view}">${icon(s.ic, 'ic')}<span>${escapeHtml(s.label)}</span>${c ? `<span class="cnt">${c}</span>` : ''}</div>`;
+  }).join('');
+}
+function renderIdentity() {
+  const initials = CURRENT_USER.name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+  return `<div class="identity" title="${escapeHtml(CURRENT_USER.role)}"><div class="avatar">${initials}</div><div class="who"><div class="nm">${escapeHtml(CURRENT_USER.name)}</div><div class="rl">${escapeHtml(CURRENT_USER.role)}</div></div></div>`;
+}
+
+// ---------------------------------------------------------------- global search
+function renderSearchDrop(q) {
+  const results = searchEntities(q).slice(0, 8);
+  if (!results.length) return `<div class="sr-empty">No matches for "${escapeHtml(q)}". Try an ID, tag, PO number or heat number.</div>`;
+  const groups = {};
+  results.forEach(r => (groups[r.type] = groups[r.type] || []).push(r));
+  let html = '';
+  Object.entries(groups).forEach(([type, items]) => {
+    html += `<div class="sr-group-label">${escapeHtml(type)}</div>`;
+    items.forEach(it => {
+      html += `<div class="sr-item" ${nav(it.nav.view, it.nav.id, it.nav.extra)}><span class="t">${escapeHtml(it.label)}</span><span class="s">${escapeHtml(it.sub)}</span></div>`;
+    });
+  });
+  html += `<div class="sr-more" data-search-more="1">See all results for "${escapeHtml(q)}"</div>`;
+  return html;
+}
+function hideSearchDrop() {
+  const d = document.getElementById('searchdrop');
+  if (d) { d.hidden = true; d.innerHTML = ''; }
+}
+
+// ---------------------------------------------------------------- mobile sidebar
+function toggleMobileSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeMobileSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
+// ---------------------------------------------------------------- event delegation
+document.addEventListener('click', function (e) {
+  const sidebarEl = e.target.closest('[data-sidebar]');
+  if (sidebarEl) { navigateModule(sidebarEl.getAttribute('data-sidebar')); closeMobileSidebar(); hideSearchDrop(); return; }
+
+  if (e.target.closest('#hamburger')) { toggleMobileSidebar(); return; }
+  if (e.target.closest('#sidebar-overlay')) { closeMobileSidebar(); return; }
+
+  if (e.target.closest('#notifbtn')) { navigateModule('notifications-list'); hideSearchDrop(); return; }
+
+  const crumbEl = e.target.closest('[data-crumb]');
+  if (crumbEl) { goToCrumb(parseInt(crumbEl.getAttribute('data-crumb'), 10)); return; }
+
+  const tabEl = e.target.closest('[data-settab]');
+  if (tabEl) { updateTopParams({ tab: tabEl.getAttribute('data-settab') }); return; }
+
+  const sortEl = e.target.closest('[data-sort-key]');
+  if (sortEl) {
+    const key = sortEl.getAttribute('data-sort-key');
+    const top = navStack[navStack.length - 1];
+    const dir = (top.params.sortKey === key && top.params.sortDir === 'asc') ? 'desc' : 'asc';
+    updateTopParams({ sortKey: key, sortDir: dir });
+    return;
+  }
+
+  const srMore = e.target.closest('[data-search-more]');
+  if (srMore) {
+    const q = document.getElementById('globalsearch').value;
+    hideSearchDrop();
+    navigate('search-results', null, { q });
+    return;
+  }
+
+  const navEl = e.target.closest('[data-nav-view]');
+  if (navEl) {
+    const view = navEl.getAttribute('data-nav-view');
+    const id = navEl.getAttribute('data-nav-id') || null;
+    const extraRaw = navEl.getAttribute('data-nav-extra');
+    let extra = null;
+    if (extraRaw) { try { extra = JSON.parse(extraRaw); } catch (err) { extra = null; } }
+    hideSearchDrop();
+    navigate(view, id, extra);
+    return;
+  }
+
+  if (!e.target.closest('.searchwrap')) hideSearchDrop();
+});
+
+document.addEventListener('change', function (e) {
+  const sel = e.target.closest('select[data-filter-key]');
+  if (sel) updateTopParams({ [sel.getAttribute('data-filter-key')]: sel.value || undefined });
+});
+
+document.addEventListener('input', function (e) {
+  if (e.target.id === 'globalsearch') {
+    const q = e.target.value;
+    const drop = document.getElementById('searchdrop');
+    if (!q.trim()) { drop.hidden = true; drop.innerHTML = ''; return; }
+    drop.innerHTML = renderSearchDrop(q);
+    drop.hidden = false;
+  }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.target.id !== 'globalsearch') return;
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const q = e.target.value;
+    hideSearchDrop();
+    navigate('search-results', null, { q });
+  } else if (e.key === 'Escape') {
+    hideSearchDrop();
+    e.target.blur();
+  }
+});
+
+// ---------------------------------------------------------------- boot
+(function boot() {
+  document.getElementById('sidebarnav').innerHTML = renderSidebarNav();
+  document.getElementById('identityslot').innerHTML = renderIdentity();
+  document.getElementById('ham-ic-slot').outerHTML = icon('menu');
+  document.getElementById('search-ic-slot').outerHTML = icon('search', 'searchic');
+  document.getElementById('notif-ic-slot').outerHTML = icon('bell');
+  render();
+})();
+
+</script>
