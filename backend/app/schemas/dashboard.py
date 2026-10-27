@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel
@@ -49,6 +50,49 @@ class ExecutiveInsight(BaseModel):
     entity_label: str
 
 
+class FinanceOverview(BaseModel):
+    """Phase 8 module report — mirrors finance.FinanceSummary but scoped to the dashboard's own days filter."""
+
+    period_days: int
+    total_inbound: Decimal
+    total_outbound: Decimal
+    platform_net_revenue: Decimal
+    transaction_count: int
+
+
+class KycBucket(BaseModel):
+    valid: int
+    expiring_soon: int
+    expired: int
+    missing: int
+
+
+class KycOverview(BaseModel):
+    """Phase 9 module report — driver/vehicle KYC compliance, aggregated across the whole fleet/roster."""
+
+    drivers_total: int
+    drivers: KycBucket
+    tankers_total: int
+    tankers: KycBucket
+
+
+class ConnectivityOverview(BaseModel):
+    online: int
+    degraded: int
+    offline: int
+
+
+class DailyCount(BaseModel):
+    date: str
+    count: int
+
+
+class AuditOverview(BaseModel):
+    actions_last_24h: int
+    actions_last_7d: int
+    trend: list[DailyCount]
+
+
 class DashboardResponse(BaseModel):
     simulation_time: datetime
     kpis: DashboardKpis
@@ -57,6 +101,10 @@ class DashboardResponse(BaseModel):
     daily_throughput: list[DailyThroughputPoint]
     tanker_activity: list[TankerActivityCount]
     insights: list[ExecutiveInsight]
+    finance: FinanceOverview
+    kyc: KycOverview
+    connectivity: ConnectivityOverview
+    audit: AuditOverview
 
 
 class StationOut(BaseModel):

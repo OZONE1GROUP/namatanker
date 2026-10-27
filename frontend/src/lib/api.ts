@@ -97,6 +97,45 @@ export interface ExecutiveInsight {
   entity_label: string
 }
 
+export interface DashboardFinanceOverview {
+  period_days: number
+  total_inbound: number
+  total_outbound: number
+  platform_net_revenue: number
+  transaction_count: number
+}
+
+export interface KycBucket {
+  valid: number
+  expiring_soon: number
+  expired: number
+  missing: number
+}
+
+export interface DashboardKycOverview {
+  drivers_total: number
+  drivers: KycBucket
+  tankers_total: number
+  tankers: KycBucket
+}
+
+export interface DashboardConnectivityOverview {
+  online: number
+  degraded: number
+  offline: number
+}
+
+export interface DashboardDailyCount {
+  date: string
+  count: number
+}
+
+export interface DashboardAuditOverview {
+  actions_last_24h: number
+  actions_last_7d: number
+  trend: DashboardDailyCount[]
+}
+
 export interface DashboardResponse {
   simulation_time: string
   kpis: DashboardKpis
@@ -105,6 +144,10 @@ export interface DashboardResponse {
   daily_throughput: DailyThroughputPoint[]
   tanker_activity: TankerActivityCount[]
   insights: ExecutiveInsight[]
+  finance: DashboardFinanceOverview
+  kyc: DashboardKycOverview
+  connectivity: DashboardConnectivityOverview
+  audit: DashboardAuditOverview
 }
 
 export function getDashboard(params?: { station_id?: string; days?: number }) {

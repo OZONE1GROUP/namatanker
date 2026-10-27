@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.core import Alert, Order, SimulationSettings, Station, Tanker
+from app.models.core import Alert, AuditEntry, Driver, Order, SimulationSettings, Station, Tanker
 from app.models.enums import (
     ACTIVE_LOADING_STATUSES,
     COMPLETED_DELIVERY_STATUSES,
@@ -18,14 +18,22 @@ from app.models.enums import (
     TankerStatus,
 )
 from app.schemas.dashboard import (
+    AuditOverview,
+    ConnectivityOverview,
+    DailyCount,
     DailyThroughputPoint,
     DashboardKpis,
     DashboardResponse,
+    FinanceOverview,
+    KycBucket,
+    KycOverview,
     SimulationStatusOut,
     StationVolume,
     StatusCount,
     TankerActivityCount,
 )
+from app.services import finance as finance_service
+from app.services import kyc as kyc_service
 from app.services.insights import build_insights
 
 router = APIRouter(tags=["dashboard"])
@@ -39,6 +47,15 @@ def _get_or_create_sim_settings(db: Session) -> SimulationSettings:
         db.commit()
         db.refresh(settings)
     return settings
+
+
+def _kyc_bucket(statuses: list[str]) -> KycBucket:
+    return KycBucket(
+        valid=sum(1 for s in statuses if s == kyc_service.STATUS_VALID),
+        expiring_soon=sum(1 for s in statuses if s == kyc_service.STATUS_EXPIRING_SOON),
+        expired=sum(1 for s in statuses if s == kyc_service.STATUS_EXPIRED),
+        missing=sum(1 for s in statuses if s == kyc_service.STATUS_MISSING),
+    )
 
 
 @router.get("/dashboard", response_model=DashboardResponse)
@@ -91,6 +108,9 @@ def get_dashboard(
     ) or 0
     offline_stations = db.scalar(
         station_q.where(Station.connectivity_status == ConnectivityStatus.offline)
+    ) or 0
+    degraded_stations = db.scalar(
+        station_q.where(Station.connectivity_status == ConnectivityStatus.degraded)
     ) or 0
 
     critical_alerts = db.scalar(
@@ -152,6 +172,54 @@ def get_dashboard(
 
     insights = build_insights(db, window_start)
 
+    # Phase 8 module report — Finance & Revenue Share, scoped to the same `days` window as the rest of the page.
+    finance_data = finance_service.get_finance_summary(db, days=days)
+    finance_overview = FinanceOverview(
+        period_days=finance_data["period_days"],
+        total_inbound=finance_data["total_inbound"],
+        total_outbound=finance_data["total_outbound"],
+        platform_net_revenue=finance_data["platform_net_revenue"],
+        transaction_count=finance_data["transaction_count"],
+    )
+
+    # Phase 9 module report — Driver & Vehicle KYC compliance, aggregated across the whole roster/fleet
+    # (not time-windowed: KYC validity is a point-in-time state, not an event).
+    all_drivers = db.execute(select(Driver)).scalars().all()
+    all_tankers = db.execute(select(Tanker)).scalars().all()
+    driver_statuses = [kyc_service.driver_kyc(d).overall_status for d in all_drivers]
+    tanker_statuses = [kyc_service.tanker_kyc(t).overall_status for t in all_tankers]
+    kyc_overview = KycOverview(
+        drivers_total=len(all_drivers),
+        drivers=_kyc_bucket(driver_statuses),
+        tankers_total=len(all_tankers),
+        tankers=_kyc_bucket(tanker_statuses),
+    )
+
+    connectivity_overview = ConnectivityOverview(
+        online=connected_stations, degraded=degraded_stations, offline=offline_stations
+    )
+
+    # Audit Trail module report — recent activity volume, independent of the station/days filter above
+    # (the audit trail is a global record, not scoped to one station).
+    now_ts = datetime.now(timezone.utc)
+    actions_24h = db.scalar(
+        select(func.count()).select_from(AuditEntry).where(AuditEntry.timestamp >= now_ts - timedelta(hours=24))
+    ) or 0
+    actions_7d = db.scalar(
+        select(func.count()).select_from(AuditEntry).where(AuditEntry.timestamp >= now_ts - timedelta(days=7))
+    ) or 0
+    audit_day_rows = db.execute(
+        select(func.date(AuditEntry.timestamp).label("d"), func.count().label("c"))
+        .where(AuditEntry.timestamp >= now_ts - timedelta(days=7))
+        .group_by("d")
+        .order_by("d")
+    ).all()
+    audit_overview = AuditOverview(
+        actions_last_24h=actions_24h,
+        actions_last_7d=actions_7d,
+        trend=[DailyCount(date=str(d), count=c) for d, c in audit_day_rows],
+    )
+
     return DashboardResponse(
         simulation_time=sim.simulation_time,
         kpis=kpis,
@@ -160,6 +228,10 @@ def get_dashboard(
         daily_throughput=daily_throughput,
         tanker_activity=tanker_activity,
         insights=insights,
+        finance=finance_overview,
+        kyc=kyc_overview,
+        connectivity=connectivity_overview,
+        audit=audit_overview,
     )
 
 

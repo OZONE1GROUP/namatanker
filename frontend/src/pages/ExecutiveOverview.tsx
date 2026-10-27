@@ -16,6 +16,11 @@ import {
   Info,
   AlertTriangle,
   Loader2,
+  Wallet,
+  BadgeCheck,
+  Radio,
+  History,
+  ArrowUpRight,
 } from "lucide-react"
 import {
   BarChart,
@@ -35,7 +40,7 @@ import {
 import { getDashboard, getStations, type DashboardResponse, type StationListItem } from "@/lib/api"
 import { KpiCard } from "@/components/ui/KpiCard"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card"
-import { formatNumber, formatVolume } from "@/lib/utils"
+import { formatNumber, formatVolume, formatOMR } from "@/lib/utils"
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "#94a3b8",
@@ -60,6 +65,19 @@ const STATUS_COLORS: Record<string, string> = {
 
 const TANKER_COLORS = ["#3182ce", "#0f9d92", "#d97706", "#94a3b8", "#16a34a"]
 
+const KYC_COLORS: Record<string, string> = {
+  valid: "#16a34a",
+  expiring_soon: "#d97706",
+  expired: "#dc2626",
+  missing: "#94a3b8",
+}
+
+const CONNECTIVITY_COLORS: Record<string, string> = {
+  online: "#16a34a",
+  degraded: "#d97706",
+  offline: "#94a3b8",
+}
+
 const INSIGHT_ICON = { info: Info, warning: AlertTriangle, critical: Siren } as const
 const INSIGHT_TONE: Record<string, string> = {
   info: "text-status-blue bg-status-blue-bg",
@@ -69,6 +87,18 @@ const INSIGHT_TONE: Record<string, string> = {
 
 function prettyStatus(s: string) {
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+/** A small "View <module>" link used in Module Report card headers. */
+function ModuleLink({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1 text-xs font-medium text-teal-600 transition hover:text-teal-700 hover:underline"
+    >
+      {label} <ArrowUpRight className="h-3 w-3" />
+    </button>
+  )
 }
 
 export function ExecutiveOverview() {
@@ -268,6 +298,194 @@ export function ExecutiveOverview() {
                     </Pie>
                     <Tooltip formatter={(v, n) => [formatNumber(Number(v)), prettyStatus(String(n))]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                   </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Module Reports — live reporting surfaced from every deployed platform module */}
+          <div>
+            <h2 className="text-sm font-semibold text-(--app-text)">Module Reports</h2>
+            <p className="text-xs text-(--app-text-muted)">Live reporting across every deployed platform module.</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Finance & Revenue Share */}
+            <Card>
+              <CardHeader className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-md bg-status-green-bg p-1.5 text-status-green">
+                    <Wallet className="h-3.5 w-3.5" />
+                  </span>
+                  <CardTitle>Finance &amp; Revenue Share</CardTitle>
+                </div>
+                <ModuleLink label="Finance" onClick={() => navigate("/finance")} />
+              </CardHeader>
+              <CardContent>
+                <div className="mb-3 grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-xs text-(--app-text-muted)">Inbound</p>
+                    <p className="text-sm font-semibold text-(--app-text)">{formatOMR(data?.finance.total_inbound ?? 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-(--app-text-muted)">Outbound</p>
+                    <p className="text-sm font-semibold text-(--app-text)">{formatOMR(data?.finance.total_outbound ?? 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-(--app-text-muted)">Net Revenue</p>
+                    <p className="text-sm font-semibold text-status-green">{formatOMR(data?.finance.platform_net_revenue ?? 0)}</p>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={140}>
+                  <BarChart
+                    data={[
+                      { label: "Inbound", value: data?.finance.total_inbound ?? 0, fill: "#3182ce" },
+                      { label: "Outbound", value: data?.finance.total_outbound ?? 0, fill: "#d97706" },
+                      { label: "Net Revenue", value: data?.finance.platform_net_revenue ?? 0, fill: "#16a34a" },
+                    ]}
+                    layout="vertical"
+                    margin={{ left: 12 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} tickFormatter={(v) => formatNumber(v)} />
+                    <YAxis dataKey="label" type="category" width={80} tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} />
+                    <Tooltip formatter={(v) => [formatOMR(Number(v)), "Amount"]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                      {[0, 1, 2].map((i) => (
+                        <Cell key={i} fill={["#3182ce", "#d97706", "#16a34a"][i]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <p className="mt-1 text-center text-xs text-(--app-text-muted)">
+                  {formatNumber(data?.finance.transaction_count ?? 0)} transactions over the last {data?.finance.period_days ?? days} days
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Driver & Vehicle KYC Compliance */}
+            <Card>
+              <CardHeader className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-md bg-status-blue-bg p-1.5 text-status-blue">
+                    <BadgeCheck className="h-3.5 w-3.5" />
+                  </span>
+                  <CardTitle>Driver &amp; Vehicle KYC Compliance</CardTitle>
+                </div>
+                <div className="flex gap-2">
+                  <ModuleLink label="Drivers" onClick={() => navigate("/drivers")} />
+                  <ModuleLink label="Fleet" onClick={() => navigate("/fleet")} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-3 grid grid-cols-2 gap-2 text-center">
+                  <div>
+                    <p className="text-xs text-(--app-text-muted)">Drivers ({formatNumber(data?.kyc.drivers_total ?? 0)})</p>
+                    <p className="text-sm font-semibold text-status-red">
+                      {formatNumber(data?.kyc.drivers.expired ?? 0)} expired
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-(--app-text-muted)">Tankers ({formatNumber(data?.kyc.tankers_total ?? 0)})</p>
+                    <p className="text-sm font-semibold text-status-red">
+                      {formatNumber(data?.kyc.tankers.expired ?? 0)} expired
+                    </p>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={140}>
+                  <BarChart
+                    data={[
+                      { entity: "Drivers", ...data?.kyc.drivers },
+                      { entity: "Tankers", ...data?.kyc.tankers },
+                    ]}
+                    margin={{ left: -20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" vertical={false} />
+                    <XAxis dataKey="entity" tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} allowDecimals={false} />
+                    <Tooltip
+                      formatter={(v, n) => [formatNumber(Number(v)), prettyStatus(String(n))]}
+                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                    />
+                    <Bar dataKey="valid" name="valid" stackId="kyc" fill={KYC_COLORS.valid} radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="expiring_soon" name="expiring_soon" stackId="kyc" fill={KYC_COLORS.expiring_soon} />
+                    <Bar dataKey="expired" name="expired" stackId="kyc" fill={KYC_COLORS.expired} />
+                    <Bar dataKey="missing" name="missing" stackId="kyc" fill={KYC_COLORS.missing} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Station Connectivity */}
+            <Card>
+              <CardHeader className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-md bg-status-teal-bg p-1.5 text-status-teal">
+                    <Radio className="h-3.5 w-3.5" />
+                  </span>
+                  <CardTitle>Station Connectivity</CardTitle>
+                </div>
+                <ModuleLink label="Stations" onClick={() => navigate("/stations")} />
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: "online", value: data?.connectivity.online ?? 0 },
+                        { name: "degraded", value: data?.connectivity.degraded ?? 0 },
+                        { name: "offline", value: data?.connectivity.offline ?? 0 },
+                      ]}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={45}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      label={(entry) => prettyStatus(String(entry.name ?? ""))}
+                      labelLine={false}
+                    >
+                      {["online", "degraded", "offline"].map((status) => (
+                        <Cell key={status} fill={CONNECTIVITY_COLORS[status]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v, n) => [formatNumber(Number(v)), prettyStatus(String(n))]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Audit Trail Activity */}
+            <Card>
+              <CardHeader className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-md bg-status-amber-bg p-1.5 text-status-amber">
+                    <History className="h-3.5 w-3.5" />
+                  </span>
+                  <CardTitle>Audit Trail Activity</CardTitle>
+                </div>
+                <ModuleLink label="Audit" onClick={() => navigate("/audit")} />
+              </CardHeader>
+              <CardContent>
+                <div className="mb-2 grid grid-cols-2 gap-2 text-center">
+                  <div>
+                    <p className="text-xs text-(--app-text-muted)">Last 24 hours</p>
+                    <p className="text-sm font-semibold text-(--app-text)">{formatNumber(data?.audit.actions_last_24h ?? 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-(--app-text-muted)">Last 7 days</p>
+                    <p className="text-sm font-semibold text-(--app-text)">{formatNumber(data?.audit.actions_last_7d ?? 0)}</p>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={120}>
+                  <BarChart data={data?.audit.trend ?? []} margin={{ left: -20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--app-text-muted)" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "var(--app-text-muted)" }} allowDecimals={false} />
+                    <Tooltip formatter={(v) => [formatNumber(Number(v)), "Actions"]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                    <Bar dataKey="count" fill="#d97706" radius={[4, 4, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
