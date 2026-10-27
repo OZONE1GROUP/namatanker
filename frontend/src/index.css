@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+/* =========================================================
+   OmanOne.tech — Tanker Operations Simulator
+   Design tokens — enterprise industrial aesthetic
+   ========================================================= */
+
+@theme {
+  /* Core palette (spec section 4) */
+  --color-navy-950: #0a1826;
+  --color-navy-900: #10243a;
+  --color-slate-800: #1c2f45;
+  --color-slate-700: #263c58;
+  --color-teal-500: #0f9d92;
+  --color-teal-400: #14b8aa;
+  --color-blue-500: #3182ce;
+  --color-blue-400: #4299e1;
+  --color-bg-light: #f3f6fa;
+  --color-surface: #ffffff;
+  --color-muted: #637389;
+
+  /* Semantic status colors */
+  --color-status-green: #16a34a;
+  --color-status-green-bg: #dcfce7;
+  --color-status-blue: #3182ce;
+  --color-status-blue-bg: #dbeafe;
+  --color-status-amber: #d97706;
+  --color-status-amber-bg: #fef3c7;
+  --color-status-red: #dc2626;
+  --color-status-red-bg: #fee2e2;
+  --color-status-grey: #94a3b8;
+  --color-status-grey-bg: #f1f5f9;
+  --color-status-purple: #7c3aed;
+  --color-status-purple-bg: #ede9fe;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
+:root {
+  --app-bg: var(--color-bg-light);
+  --app-surface: var(--color-surface);
+  --app-text: #0f1b2a;
+  --app-text-muted: var(--color-muted);
+  --app-border: #e2e8f0;
+  --app-nav-bg: var(--color-navy-900);
+  --app-nav-text: #c7d4e3;
+  --app-nav-text-active: #ffffff;
+  --app-header-bg: var(--color-surface);
+}
+
+[data-theme="dark"] {
+  --app-bg: var(--color-navy-950);
+  --app-surface: var(--color-slate-800);
+  --app-text: #e6edf6;
+  --app-text-muted: #93a3bb;
+  --app-border: #2c4059;
+  --app-nav-bg: #0a1826;
+  --app-nav-text: #93a3bb;
+  --app-nav-text-active: #ffffff;
+  --app-header-bg: var(--color-slate-800);
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  border-color: var(--app-border);
+}
+
+/* Scrollbar polish */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #94a3b840; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b880; }
+
+/* Print-friendly Analytics & Reports output: hide app chrome, let the
+   report content flow full-width across pages. */
+@media print {
+  aside, header {
+    display: none !important;
+  }
+  main {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+  html, body, #root {
+    height: auto !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

@@ -1,0 +1,70 @@
+# Production deployment of IDTOS.omanone.tech, specific to the shared VPS
+# (srv2064115.hstgr.cloud) that also hosts vision.omanone.tech ("Kitchen
+# Vision"). This file is deliberately separate from docker-compose.yml
+# (which stays as the README's local-dev quick start, unmodified) because
+# this host's ports are already partly claimed by that other application:
+#
+#   - Host Postgres already listens on 127.0.0.1:5432 (native, not Docker)
+#     -> this stack's db container publishes NO host port at all; the
+#        backend reaches it over the Docker-internal network as `db:5432`.
+#   - Kitchen Vision's own backend already listens on 127.0.0.1:8000
+#     -> this stack's backend container publishes NO host port either;
+#        the frontend's nginx reverse-proxies /api/* to it internally
+#        as `backend:8000` (see frontend/nginx.conf), so nothing needs
+#        it exposed on the host at all.
+#   - Public HTTPS on :80/:443 is already owned by the host's own Caddy
+#     instance (reverse-proxying vision.omanone.tech to 127.0.0.1:8000)
+#     -> this stack's frontend container is published to 127.0.0.1:8180
+#        only (loopback, not 0.0.0.0), and a new Caddy site block for
+#        idtos.omanone.tech reverse-proxies to 127.0.0.1:8180 — the same
+#        pattern vision.omanone.tech already uses, added as a second,
+#        independent block so Caddy's graceful reload never touches it.
+#
+# Everything else about this stack (its own Postgres container/volume, its
+# own Docker network) is fully isolated from Kitchen Vision's processes —
+# no shared containers, volumes, or database.
+#
+# Deploy:
+#   docker compose -p idtos -f docker-compose.prod.yml up -d --build
+#   docker compose -p idtos -f docker-compose.prod.yml exec backend python -m app.seed
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: omanone_sim
+    volumes:
+      - idtos_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/omanone_sim
+      CORS_ORIGINS: https://idtos.omanone.tech
+      SIM_TIMEZONE: Asia/Muscat
+      SIM_CURRENCY: OMR
+      JWT_SECRET: omanone-sim-demo-secret-change-me
+      JWT_EXPIRE_MINUTES: "480"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:8180:80"
+
+volumes:
+  idtos_pgdata:

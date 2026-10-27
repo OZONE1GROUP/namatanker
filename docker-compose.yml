@@ -1,0 +1,57 @@
+# OmanOne.tech — Integrated Digital Tanker Operations Simulator
+# SIMULATION MODE: every service here only ever produces or stores
+# synthetic data; nothing in this compose file talks to real industrial
+# equipment.
+#
+# Quick start:
+#   docker compose up -d --build
+#   docker compose exec backend python -m app.seed   # first run only
+#   open http://localhost:8080
+#
+# Demo login: any account from `docker compose exec backend python -m app.seed`'s
+# printed list, e.g. admin1 / demo123 (see README.md for the full table).
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: omanone_sim
+    volumes:
+      - omanone_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/omanone_sim
+      CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
+      SIM_TIMEZONE: Asia/Muscat
+      SIM_CURRENCY: OMR
+      JWT_SECRET: omanone-sim-demo-secret-change-me
+      JWT_EXPIRE_MINUTES: "480"
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  omanone_pgdata:
