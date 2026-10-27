@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.auth_deps import get_current_user
 from app.database import get_db
-from app.models.core import Alert, AuditEntry, Order, Station, User
+from app.models.core import Alert, AuditEntry, Driver, Order, Station, Tanker, User
 from app.models.enums import AlertStatus
 from app.schemas.alerts import AlertActionResponse, AlertListItem, AlertListResponse
 
@@ -22,6 +22,14 @@ def _to_item(db: Session, alert: Alert) -> AlertListItem:
     if alert.related_station_id:
         station = db.get(Station, alert.related_station_id)
         station_name = station.name if station else None
+    driver_name = None
+    if alert.related_driver_id:
+        driver = db.get(Driver, alert.related_driver_id)
+        driver_name = driver.display_name if driver else None
+    tanker_code = None
+    if alert.related_tanker_id:
+        tanker = db.get(Tanker, alert.related_tanker_id)
+        tanker_code = tanker.tanker_code if tanker else None
     return AlertListItem(
         id=alert.id,
         severity=alert.severity.value,
@@ -33,6 +41,10 @@ def _to_item(db: Session, alert: Alert) -> AlertListItem:
         related_order_number=order_number,
         related_station_id=alert.related_station_id,
         related_station_name=station_name,
+        related_driver_id=alert.related_driver_id,
+        related_driver_name=driver_name,
+        related_tanker_id=alert.related_tanker_id,
+        related_tanker_code=tanker_code,
         recommended_action=alert.recommended_action,
         created_at=alert.created_at,
         acknowledged_at=alert.acknowledged_at,

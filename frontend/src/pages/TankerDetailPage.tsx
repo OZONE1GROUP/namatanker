@@ -5,7 +5,7 @@ import { getTanker, type TankerDetail } from "@/lib/api"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card"
 import { StatusBadge } from "@/components/ui/Badge"
 import { statusTone, prettyStatus } from "@/lib/orderStatus"
-import { formatDateTime, formatNumber } from "@/lib/utils"
+import { formatDateTime, formatDate, formatNumber } from "@/lib/utils"
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -69,6 +69,25 @@ export function TankerDetailPage() {
               <InfoRow label="GPS signal" value={tanker.gps_signal_ok ? "OK" : "No signal (simulated)"} />
               <InfoRow label="Last position" value={tanker.last_lat != null && tanker.last_lon != null ? `${tanker.last_lat.toFixed(4)}, ${tanker.last_lon.toFixed(4)}` : null} />
               <InfoRow label="Last comm." value={tanker.last_comm_at ? formatDateTime(tanker.last_comm_at) : null} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Vehicle KYC</CardTitle>
+            <StatusBadge tone={statusTone(tanker.kyc.overall_status)} label={prettyStatus(tanker.kyc.overall_status)} />
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+            <div>
+              <InfoRow label="Registration (Istimara) no." value={tanker.registration_number} />
+              <InfoRow label="Registration expiry" value={tanker.kyc.registration_expiry ? formatDate(tanker.kyc.registration_expiry) : null} />
+              <InfoRow label="Registration status" value={<StatusBadge tone={statusTone(tanker.kyc.registration_status)} label={prettyStatus(tanker.kyc.registration_status)} />} />
+            </div>
+            <div>
+              <InfoRow label="Insurance no." value={tanker.kyc.insurance_number} />
+              <InfoRow label="Insurance expiry" value={tanker.kyc.insurance_expiry ? formatDate(tanker.kyc.insurance_expiry) : null} />
+              <InfoRow label="Insurance status" value={<StatusBadge tone={statusTone(tanker.kyc.insurance_status)} label={prettyStatus(tanker.kyc.insurance_status)} />} />
             </div>
           </CardContent>
         </Card>

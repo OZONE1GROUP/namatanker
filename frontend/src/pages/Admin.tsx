@@ -28,6 +28,7 @@ const PERMISSION_MATRIX: PermissionRow[] = [
   { action: "Create / assign / dispatch / progress orders", roles: ["operator", "authorization_officer", "fleet_manager", "admin"] },
   { action: "Authorize or reject a loading authorization", roles: ["authorization_officer", "admin"] },
   { action: "Disconnect / reconnect a station's edge gateway", roles: ["fleet_manager", "admin"] },
+  { action: "Register a new driver or vehicle (KYC documents)", roles: ["fleet_manager", "admin"] },
   { action: "Acknowledge / resolve / escalate alerts", roles: ["operator", "authorization_officer", "fleet_manager", "auditor", "admin"] },
   { action: "Pause / resume / change simulation clock speed", roles: ["admin"] },
 ]

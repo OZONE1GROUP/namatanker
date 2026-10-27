@@ -14,6 +14,10 @@ class AlertListItem(BaseModel):
     related_order_number: str | None
     related_station_id: str | None
     related_station_name: str | None
+    related_driver_id: str | None
+    related_driver_name: str | None
+    related_tanker_id: str | None
+    related_tanker_code: str | None
     recommended_action: str | None
     created_at: datetime
     acknowledged_at: datetime | None

@@ -28,6 +28,13 @@ export function formatDateTime(iso: string) {
   })
 }
 
+/** Formats a plain calendar date (YYYY-MM-DD, e.g. a KYC document expiry) — no timezone conversion, since there's no time-of-day component to convert. */
+export function formatDate(isoDate: string) {
+  const [year, month, day] = isoDate.split("-").map(Number)
+  const d = new Date(Date.UTC(year, month - 1, day))
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
+}
+
 export function formatTime(iso: string) {
   const d = new Date(iso)
   return d.toLocaleTimeString("en-GB", {

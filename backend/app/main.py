@@ -27,9 +27,14 @@ app = FastAPI(
         "Phase 8 adds a finance & revenue-share module (price per liter, an "
         "inbound/outbound transaction ledger, and commission allocation "
         "reporting) plus a payment-gateway configuration surface — all still "
-        "synthetic, never a real payment integration."
+        "synthetic, never a real payment integration. Phase 9 adds driver "
+        "and vehicle registration with KYC document tracking (license + "
+        "civil ID; vehicle registration + insurance), hard-blocks "
+        "assignment on any expired KYC document, and raises Alerts & "
+        "Exceptions entries as documents approach or pass expiry — all "
+        "still synthetic demo data, never a real identity/compliance check."
     ),
-    version="0.8.0-phase8",
+    version="0.9.0-phase9",
     lifespan=lifespan,
 )
 

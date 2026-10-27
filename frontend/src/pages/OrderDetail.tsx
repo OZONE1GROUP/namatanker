@@ -427,21 +427,25 @@ function ActionFormModal({
       <div className="space-y-3">
         {action === "assign" && (
           <>
-            <Field label="Tanker" hint={tankers.length === 0 ? "Loading tankers…" : undefined}>
+            <Field label="Tanker" hint={tankers.length === 0 ? "Loading tankers…" : "A tanker with expired KYC (registration/insurance) cannot be assigned."}>
               <select value={tankerId} onChange={(e) => setTankerId(e.target.value)} className={selectClass}>
                 <option value="">Select tanker…</option>
                 {tankers.map((t) => (
-                  <option key={t.id} value={t.id} disabled={t.status !== "idle"}>
+                  <option key={t.id} value={t.id} disabled={t.status !== "idle" || t.kyc_status === "expired"}>
                     {t.tanker_code} — {prettyStatus(t.assigned_product)} ({prettyStatus(t.status)})
+                    {t.kyc_status === "expired" ? " — KYC EXPIRED" : t.kyc_status === "expiring_soon" ? " — KYC expiring soon" : ""}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field label="Driver (optional)">
+            <Field label="Driver (optional)" hint="A driver with expired KYC (license/civil ID) cannot be assigned.">
               <select value={driverId} onChange={(e) => setDriverId(e.target.value)} className={selectClass}>
                 <option value="">Auto / none</option>
                 {drivers.map((d) => (
-                  <option key={d.id} value={d.id}>{d.display_name} ({prettyStatus(d.duty_status)})</option>
+                  <option key={d.id} value={d.id} disabled={d.kyc.overall_status === "expired"}>
+                    {d.display_name} ({prettyStatus(d.duty_status)})
+                    {d.kyc.overall_status === "expired" ? " — KYC EXPIRED" : d.kyc.overall_status === "expiring_soon" ? " — KYC expiring soon" : ""}
+                  </option>
                 ))}
               </select>
             </Field>

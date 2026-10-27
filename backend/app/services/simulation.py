@@ -29,6 +29,14 @@ from datetime import datetime, timedelta, timezone
 from app.database import SessionLocal
 from app.models.core import Alert, LoadingBay, Order, SimulationSettings, Station
 from app.models.enums import AlertSeverity, ConnectivityStatus, OrderStatus
+from app.services import kyc as kyc_service
+
+# Phase 9 — how often (in ticks) the engine re-scans driver/tanker KYC
+# validity and syncs Alerts & Exceptions entries. At TICK_SECONDS == 2.0
+# this is roughly once a minute of wall-clock time — frequent enough that a
+# newly-expired document surfaces promptly in the demo, cheap enough not to
+# matter next to the per-tick work above.
+KYC_CHECK_EVERY_N_TICKS = 30
 
 logger = logging.getLogger("simulation")
 
@@ -159,6 +167,10 @@ class SimulationEngine:
                 alert = self._maybe_spawn_alert(db)
                 if alert:
                     new_alerts.append({"id": alert.id, "title": alert.title, "severity": alert.severity.value})
+
+            if self._tick_counter % KYC_CHECK_EVERY_N_TICKS == 0:
+                for kyc_alert in kyc_service.check_kyc_alerts(db):
+                    new_alerts.append({"id": kyc_alert.id, "title": kyc_alert.title, "severity": kyc_alert.severity.value})
 
             self._tick_flow_events(db, loading_snapshot, transit_snapshot, new_alerts, now)
             station_snapshot = self._tick_stations(db)

@@ -123,7 +123,17 @@ export function Alerts() {
                         {a.related_station_name}
                       </button>
                     )}
-                    {!a.related_order_id && !a.related_station_id && "—"}
+                    {a.related_tanker_id && (
+                      <button className="text-teal-600 hover:underline" onClick={() => navigate(`/fleet/${a.related_tanker_id}`)}>
+                        {a.related_tanker_code}
+                      </button>
+                    )}
+                    {a.related_driver_id && !a.related_tanker_id && (
+                      <button className="text-teal-600 hover:underline" onClick={() => navigate("/drivers")}>
+                        {a.related_driver_name}
+                      </button>
+                    )}
+                    {!a.related_order_id && !a.related_station_id && !a.related_driver_id && !a.related_tanker_id && "—"}
                   </td>
                   <td className="px-4 py-2.5"><StatusBadge tone={statusTone(a.status)} label={prettyStatus(a.status)} /></td>
                   <td className="px-4 py-2.5 text-(--app-text-muted)">{formatDateTime(a.created_at)}</td>

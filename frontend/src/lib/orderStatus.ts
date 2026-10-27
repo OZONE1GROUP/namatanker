@@ -46,6 +46,9 @@ const TONE_MAP: Record<string, StatusTone> = {
   valid: "green",
   expired: "red",
   revoked: "red",
+  // Phase 9 — KYC document validity
+  expiring_soon: "amber",
+  missing: "grey",
   info: "blue",
   warning: "amber",
   critical: "red",

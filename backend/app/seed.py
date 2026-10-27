@@ -44,6 +44,7 @@ from app.models.enums import (
 )
 from app.security import hash_password
 from app.services import finance as finance_service
+from app.services import kyc as kyc_service
 
 # Phase 7 demo accounts — every seeded user shares this password so the
 # login page can show it directly next to each role (SIMULATION MODE: a
@@ -59,7 +60,6 @@ DEMO_USERS = [
 ]
 
 RNG_SEED = 20261026
-random.seed(RNG_SEED)
 
 STATIONS = [
     ("STN-MCT", "Muscat Terminal", "Mina Al Fahal, Muscat"),
@@ -115,6 +115,17 @@ def wipe(db):
 
 
 def seed():
+    # Re-seed on every call (not just once at import time) so repeated
+    # reseeds — including the test suite's autouse per-test reseed — always
+    # reproduce the exact same dataset, independent of how many times
+    # seed() has already run in this process. Phase 9's KYC dates use a
+    # separate RNG instance so adding them never shifts the sequence of
+    # `random.*` calls the rest of this dataset (station/tanker/driver
+    # attributes, order generation, etc.) already depends on for its exact,
+    # previously-tested shape.
+    random.seed(RNG_SEED)
+    kyc_rng = random.Random(RNG_SEED + 1)
+
     # Phase 1/2 have no migration tooling yet (Alembic is installed and ready
     # for Phase 3+): drop_all + create_all keeps the dev schema in sync with
     # the models on every reseed. This is a SIMULATION-MODE dev database only.
@@ -170,12 +181,40 @@ def seed():
         db.flush()
 
         # --- Tankers (25, within 10-50 pilot target) ---
+        # Phase 9 — vehicle KYC (registration/Istimara + insurance, each with
+        # its own expiry). SIMULATION MODE: synthetic document numbers only.
+        # A handful of tankers are deliberately seeded expired/expiring soon
+        # so the KYC-blocking rule and the compliance alerts have something
+        # real to demonstrate.
+        today = now.date()
+        TANKER_REG_EXPIRED = {2}
+        TANKER_INS_EXPIRED = {20}
+        TANKER_REG_EXPIRING_SOON = {15}
+        TANKER_INS_EXPIRING_SOON = {7}
+
         tankers = []
         for i in range(1, 26):
             code = f"TNK-{i:03d}"
+            if i in TANKER_REG_EXPIRED:
+                registration_expiry = today - timedelta(days=12)
+            elif i in TANKER_REG_EXPIRING_SOON:
+                registration_expiry = today + timedelta(days=20)
+            else:
+                registration_expiry = today + timedelta(days=kyc_rng.randint(120, 730))
+
+            if i in TANKER_INS_EXPIRED:
+                insurance_expiry = today - timedelta(days=3)
+            elif i in TANKER_INS_EXPIRING_SOON:
+                insurance_expiry = today + timedelta(days=9)
+            else:
+                insurance_expiry = today + timedelta(days=kyc_rng.randint(120, 730))
+
             t = Tanker(
                 tanker_code=code,
                 registration_number=f"OM-{random.randint(10000, 99999)}",
+                registration_expiry=registration_expiry,
+                insurance_number=f"INS-{kyc_rng.randint(100000, 999999)}",
+                insurance_expiry=insurance_expiry,
                 capacity_l=random.choice([20000, 25000, 30000, 36000]),
                 assigned_product=random.choice(PRODUCTS),
                 status=TankerStatus.idle,
@@ -189,14 +228,39 @@ def seed():
         db.flush()
 
         # --- Drivers (one per ~first 20 tankers, a few spare) ---
+        # Phase 9 — driver KYC (driving license + civil/resident ID, each
+        # with its own expiry). SIMULATION MODE: synthetic document numbers.
+        DRIVER_LICENSE_EXPIRED = {3}
+        DRIVER_CIVIL_ID_EXPIRED = {18}
+        DRIVER_LICENSE_EXPIRING_SOON = {14}
+        DRIVER_CIVIL_ID_EXPIRING_SOON = {9}
+
         drivers = []
         for i in range(1, 23):
+            if i in DRIVER_CIVIL_ID_EXPIRED:
+                civil_id_expiry = today - timedelta(days=2)
+            elif i in DRIVER_CIVIL_ID_EXPIRING_SOON:
+                civil_id_expiry = today + timedelta(days=18)
+            else:
+                civil_id_expiry = today + timedelta(days=kyc_rng.randint(180, 900))
+
+            if i in DRIVER_LICENSE_EXPIRED:
+                license_expiry = today - timedelta(days=15)
+            elif i in DRIVER_LICENSE_EXPIRING_SOON:
+                license_expiry = today + timedelta(days=5)
+            else:
+                license_expiry = today + timedelta(days=kyc_rng.randint(180, 900))
+
             d = Driver(
                 driver_code=f"DRV-{i:03d}",
                 display_name=f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}",
                 duty_status=DriverDutyStatus.off_duty,
                 qualification_status=random.choice(["Certified", "Certified", "Certified", "Renewal Due"]),
                 assigned_tanker_id=tankers[i - 1].id if i <= len(tankers) else None,
+                civil_id_number=f"{kyc_rng.randint(10000000, 99999999)}",
+                civil_id_expiry=civil_id_expiry,
+                license_number=f"DL-{kyc_rng.randint(100000, 999999)}",
+                license_expiry=license_expiry,
             )
             drivers.append(d)
         db.add_all(drivers)
@@ -467,6 +531,12 @@ def seed():
                     )
                 )
         db.add_all(alerts)
+        db.flush()
+
+        # --- Phase 9: KYC compliance alerts for the deliberately expired /
+        # expiring-soon drivers and tankers seeded above ---
+        kyc_alerts = kyc_service.check_kyc_alerts(db, today=today)
+        alerts.extend(kyc_alerts)
 
         # --- Simulation clock ---
         db.add(SimulationSettings(id=1, simulation_time=now, speed_multiplier=1, is_paused=False, mode="SIMULATION"))
@@ -495,8 +565,8 @@ def seed():
         print(
             f"Seeded {len(stations)} stations ({len(loading_bays)} bays), {len(customers)} customers, "
             f"{len(tankers)} tankers, {len(drivers)} drivers, {len(orders)} orders "
-            f"({len(authorizations)} authorizations), {len(alerts)} alerts, {len(users)} demo user accounts, "
-            f"{len(pricing_rows)} product prices, {len(transactions)} finance transactions."
+            f"({len(authorizations)} authorizations), {len(alerts)} alerts ({len(kyc_alerts)} KYC compliance), "
+            f"{len(users)} demo user accounts, {len(pricing_rows)} product prices, {len(transactions)} finance transactions."
         )
         print(f"Demo login — any username below with password '{DEMO_PASSWORD}':")
         for username, display_name, role in DEMO_USERS:

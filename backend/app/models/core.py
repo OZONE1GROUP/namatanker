@@ -4,9 +4,9 @@ Keeps business transactions separate from telemetry/audit tables
 (those are added in later phases as TelemetryReading, OperationalEvent, etc.)
 """
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -92,6 +92,13 @@ class Tanker(Base):
     last_comm_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    # Phase 9 — vehicle KYC (SIMULATION MODE: synthetic document numbers and
+    # validity dates only). `registration_number` above is the Istimara
+    # document number; `registration_expiry` is its validity date.
+    registration_expiry: Mapped[date | None] = mapped_column(Date)
+    insurance_number: Mapped[str | None] = mapped_column(String(32))
+    insurance_expiry: Mapped[date | None] = mapped_column(Date)
+
     orders: Mapped[list["Order"]] = relationship(back_populates="tanker")
     driver: Mapped["Driver | None"] = relationship(back_populates="tanker", uselist=False)
 
@@ -110,6 +117,13 @@ class Driver(Base):
         UUID(as_uuid=False), ForeignKey("tankers.id"), unique=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Phase 9 — driver KYC (SIMULATION MODE: synthetic document numbers and
+    # validity dates only).
+    civil_id_number: Mapped[str | None] = mapped_column(String(32))
+    civil_id_expiry: Mapped[date | None] = mapped_column(Date)
+    license_number: Mapped[str | None] = mapped_column(String(32))
+    license_expiry: Mapped[date | None] = mapped_column(Date)
 
     tanker: Mapped["Tanker | None"] = relationship(back_populates="driver")
 
@@ -190,6 +204,9 @@ class Alert(Base):
     source: Mapped[str] = mapped_column(String(100))
     related_order_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("orders.id"))
     related_station_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("stations.id"))
+    # Phase 9 — KYC compliance alerts link to the driver/tanker they concern.
+    related_driver_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("drivers.id"))
+    related_tanker_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("tankers.id"))
     recommended_action: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

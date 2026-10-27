@@ -205,6 +205,29 @@ export function reconnectStation(id: string) {
 
 // ---- Fleet: tankers + drivers ----
 
+// Phase 9 — KYC validity. SIMULATION MODE: synthetic document numbers and
+// validity dates only, never a real identity/compliance check.
+export type KycStatus = "valid" | "expiring_soon" | "expired" | "missing"
+
+export interface TankerKyc {
+  registration_expiry: string | null
+  registration_status: KycStatus
+  insurance_number: string | null
+  insurance_expiry: string | null
+  insurance_status: KycStatus
+  overall_status: KycStatus
+}
+
+export interface DriverKyc {
+  civil_id_number: string | null
+  civil_id_expiry: string | null
+  civil_id_status: KycStatus
+  license_number: string | null
+  license_expiry: string | null
+  license_status: KycStatus
+  overall_status: KycStatus
+}
+
 export interface TankerListItem {
   id: string
   tanker_code: string
@@ -215,6 +238,7 @@ export interface TankerListItem {
   gps_signal_ok: boolean
   driver_name: string | null
   current_order_number: string | null
+  kyc_status: KycStatus
 }
 
 export function getTankers() {
@@ -243,10 +267,24 @@ export interface TankerDetail {
   driver_id: string | null
   driver_name: string | null
   recent_orders: RecentOrderSummary[]
+  kyc: TankerKyc
 }
 
 export function getTanker(id: string) {
   return api.get<TankerDetail>(`/tankers/${id}`)
+}
+
+export interface CreateTankerRequest {
+  registration_number: string
+  registration_expiry: string
+  insurance_number: string
+  insurance_expiry: string
+  capacity_l: number
+  assigned_product: string
+}
+
+export function createTanker(payload: CreateTankerRequest) {
+  return api.post<TankerDetail>("/tankers", payload)
 }
 
 export interface DriverListItem {
@@ -256,10 +294,24 @@ export interface DriverListItem {
   duty_status: string
   qualification_status: string
   assigned_tanker_code: string | null
+  kyc: DriverKyc
 }
 
 export function getDrivers() {
   return api.get<DriverListItem[]>("/drivers")
+}
+
+export interface CreateDriverRequest {
+  display_name: string
+  civil_id_number: string
+  civil_id_expiry: string
+  license_number: string
+  license_expiry: string
+  qualification_status?: string
+}
+
+export function createDriver(payload: CreateDriverRequest) {
+  return api.post<DriverListItem>("/drivers", payload)
 }
 
 // ---- Customers ----
@@ -548,6 +600,10 @@ export interface AlertListItem {
   related_order_number: string | null
   related_station_id: string | null
   related_station_name: string | null
+  related_driver_id: string | null
+  related_driver_name: string | null
+  related_tanker_id: string | null
+  related_tanker_code: string | null
   recommended_action: string | null
   created_at: string
   acknowledged_at: string | null

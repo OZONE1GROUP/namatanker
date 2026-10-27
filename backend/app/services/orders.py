@@ -28,6 +28,7 @@ from app.models.enums import (
     TankerStatus,
 )
 from app.services import finance as finance_service
+from app.services import kyc as kyc_service
 
 ORDER_WORKFLOW_NOTE = (
     "Draft/Submitted/Validated are collapsed into order creation, and "
@@ -88,6 +89,18 @@ def assign(db: Session, order: Order, tanker: Tanker, driver: Driver | None, act
         )
     if tanker.status not in (TankerStatus.idle, TankerStatus.returning):
         raise TransitionError(f"{tanker.tanker_code} is currently '{tanker.status.value}' and not available for a new order.")
+
+    # Phase 9 — KYC compliance gate: a tanker or driver with any expired KYC
+    # document is hard-blocked from assignment, mirroring how authorization
+    # already gates loading. This is enforced here (server-side), not just
+    # as a frontend warning.
+    tanker_kyc_reason = kyc_service.tanker_kyc_blocking_reason(tanker)
+    if tanker_kyc_reason:
+        raise TransitionError(tanker_kyc_reason)
+    if driver:
+        driver_kyc_reason = kyc_service.driver_kyc_blocking_reason(driver)
+        if driver_kyc_reason:
+            raise TransitionError(driver_kyc_reason)
 
     previous = order.status.value
     order.tanker_id = tanker.id
