@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import delete
 
 from app.database import Base, SessionLocal, engine
+from app.services.geo import STATION_COORDS, clamp_on_land
 from app.models.core import (
     Alert,
     AuditEntry,
@@ -209,6 +210,20 @@ def seed():
             else:
                 insurance_expiry = today + timedelta(days=kyc_rng.randint(120, 730))
 
+            # Last-known position: jittered around one of the simulator's
+            # real station coordinates and clamped onto Oman's mainland,
+            # rather than a raw unconstrained offset — so every seeded
+            # tanker starts out on land instead of occasionally out at
+            # sea. The station anchor comes from the dedicated kyc_rng
+            # stream (whose exact derived values nothing else depends on).
+            # The actual lat/lon deltas below still consume exactly the
+            # same two calls on the main `random` stream, in the same
+            # order and position, as the code this replaced — clamp_on_land()
+            # then pulls the result back onto land deterministically (no
+            # extra draws) — so the rest of the seeded entities below keep
+            # their exact, already-tested shape.
+            anchor_lat, anchor_lon = kyc_rng.choice(list(STATION_COORDS.values()))
+
             t = Tanker(
                 tanker_code=code,
                 registration_number=f"OM-{random.randint(10000, 99999)}",
@@ -219,8 +234,12 @@ def seed():
                 assigned_product=random.choice(PRODUCTS),
                 status=TankerStatus.idle,
                 gps_signal_ok=True,
-                last_lat=23.5880 + random.uniform(-2.0, 2.0),
-                last_lon=58.3829 + random.uniform(-2.5, 2.0),
+                last_lat=(_pos := clamp_on_land(
+                    anchor_lat, anchor_lon,
+                    random.uniform(-2.0, 2.0) * 0.15,
+                    random.uniform(-2.5, 2.0) * 0.15,
+                ))[0],
+                last_lon=_pos[1],
                 last_comm_at=now - timedelta(minutes=random.randint(1, 60)),
                 rfid_tag_id=f"RFID-{kyc_rng.randint(0x10000000, 0xFFFFFFFF):08X}",
             )

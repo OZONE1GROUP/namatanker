@@ -30,6 +30,7 @@ from app.database import SessionLocal
 from app.models.core import Alert, LoadingBay, Order, SimulationSettings, Station, Tanker
 from app.models.enums import AlertSeverity, ConnectivityStatus, OrderStatus
 from app.services import kyc as kyc_service
+from app.services.geo import STATION_COORDS, land_jitter
 
 # Phase 9 — how often (in ticks) the engine re-scans driver/tanker KYC
 # validity and syncs Alerts & Exceptions entries. At TICK_SECONDS == 2.0
@@ -284,13 +285,22 @@ class SimulationEngine:
             seen.add(order.id)
             tel = self._transit.get(order.id)
             if tel is None:
-                tanker = order.tanker
-                origin = (
-                    float(tanker.last_lat) if tanker and tanker.last_lat is not None else 23.6,
-                    float(tanker.last_lon) if tanker and tanker.last_lon is not None else 58.5,
-                )
+                # The route starts at the order's actual station — the
+                # same real-world coordinates the live map draws that
+                # station's marker at (see geo.STATION_COORDS) — rather
+                # than the tanker's last random position, so the animated
+                # route always begins at the correct pin on the map.
+                origin = STATION_COORDS.get(order.station.name) if order.station else None
+                if origin is None:
+                    tanker = order.tanker
+                    origin = (
+                        float(tanker.last_lat) if tanker and tanker.last_lat is not None else 23.6,
+                        float(tanker.last_lon) if tanker and tanker.last_lon is not None else 58.5,
+                    )
                 rnd = random.Random(order.id)
-                destination = (origin[0] + rnd.uniform(-0.6, 0.6), origin[1] + rnd.uniform(-0.6, 0.6))
+                # The synthetic delivery point is a nearby jitter that is
+                # guaranteed to land on Oman's mainland (never out at sea).
+                destination = land_jitter(origin[0], origin[1], rnd, max_offset=0.6)
                 tel = TransitTelemetry(started_at=now, origin=origin, destination=destination)
                 self._transit[order.id] = tel
 
