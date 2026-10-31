@@ -32,9 +32,14 @@ app = FastAPI(
         "civil ID; vehicle registration + insurance), hard-blocks "
         "assignment on any expired KYC document, and raises Alerts & "
         "Exceptions entries as documents approach or pass expiry — all "
-        "still synthetic demo data, never a real identity/compliance check."
+        "still synthetic demo data, never a real identity/compliance check. "
+        "Phase 10 adds an IVMS (In-Vehicle Monitoring System) module "
+        "reporting live driver-behavior telemetry per tanker, RFID-based "
+        "vehicle tracking (gate-read events) in the TFS simulator, and a "
+        "live Oman map view on the GPS & Geofencing page — still synthetic "
+        "simulated telemetry only, never real IVMS/RFID hardware."
     ),
-    version="0.9.0-phase9",
+    version="0.10.0-phase10",
     lifespan=lifespan,
 )
 

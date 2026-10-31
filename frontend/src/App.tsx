@@ -17,6 +17,7 @@ import { InteractiveDataFlow } from "@/pages/InteractiveDataFlow"
 import { TfsSimulator } from "@/pages/TfsSimulator"
 import { PlcMeterSimulator } from "@/pages/PlcMeterSimulator"
 import { Gps } from "@/pages/Gps"
+import { Ivms } from "@/pages/Ivms"
 import { Alerts } from "@/pages/Alerts"
 import { EdgeGateway } from "@/pages/EdgeGateway"
 import { EventsReconciliation } from "@/pages/EventsReconciliation"
@@ -38,6 +39,7 @@ const BUILT_PATHS = new Set([
   "/tfs-simulator",
   "/plc-meter",
   "/gps",
+  "/ivms",
   "/alerts",
   "/edge-gateway",
   "/events",
@@ -66,6 +68,7 @@ export default function App() {
           <Route path="/tfs-simulator" element={<TfsSimulator />} />
           <Route path="/plc-meter" element={<PlcMeterSimulator />} />
           <Route path="/gps" element={<Gps />} />
+          <Route path="/ivms" element={<Ivms />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/edge-gateway" element={<EdgeGateway />} />
           <Route path="/events" element={<EventsReconciliation />} />

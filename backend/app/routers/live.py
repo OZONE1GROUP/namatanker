@@ -42,6 +42,9 @@ def live_snapshot():
         geofence_events=snap.get("geofence_events", []),
         flow_events=snap.get("flow_events", []),
         stations=snap.get("stations", []),
+        rfid_events=snap.get("rfid_events", []),
+        ivms_vehicles=snap.get("ivms_vehicles", []),
+        ivms_events=snap.get("ivms_events", []),
         generated_at=snap.get("generated_at"),
     )
 

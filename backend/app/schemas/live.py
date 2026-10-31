@@ -26,6 +26,7 @@ class LoadingTelemetryOut(BaseModel):
     flow_rate_l_min: float
     ready_to_complete: bool
     station_offline: bool
+    rfid_tag_id: str | None = None
 
 
 class TransitTelemetryOut(BaseModel):
@@ -56,6 +57,46 @@ class StationConnectivityOut(BaseModel):
     last_heartbeat: str | None
 
 
+class RfidEventOut(BaseModel):
+    """RFID gate-read event — a tanker's tag scanned in or out of a station
+    loading bay gate. SIMULATION MODE: synthetic tag reads only."""
+
+    id: str
+    tanker_code: str | None
+    rfid_tag_id: str | None
+    station_name: str
+    gate: str  # "in" | "out"
+    reader: str
+    timestamp: str
+
+
+class IvmsVehicleOut(BaseModel):
+    """In-Vehicle Monitoring System — current driver-behavior telemetry for
+    one tanker. SIMULATION MODE: synthetic telemetry, never a real IVMS
+    device or camera feed."""
+
+    tanker_id: str
+    tanker_code: str
+    driver_name: str | None
+    status: str
+    engine_status: str  # "running" | "idle" | "off"
+    speed_kmh: float
+    seatbelt_fastened: bool
+    driving_score: float
+    harsh_events_session: int
+    fatigue_level: str  # "normal" | "caution" | "alert"
+
+
+class IvmsEventOut(BaseModel):
+    id: str
+    tanker_code: str | None
+    driver_name: str | None
+    event_type: str
+    severity: str
+    message: str
+    timestamp: str
+
+
 class LiveSnapshotOut(BaseModel):
     simulation_time: str | None
     is_paused: bool
@@ -65,6 +106,9 @@ class LiveSnapshotOut(BaseModel):
     geofence_events: list[GeofenceEventOut]
     flow_events: list[FlowEventOut]
     stations: list[StationConnectivityOut]
+    rfid_events: list[RfidEventOut] = []
+    ivms_vehicles: list[IvmsVehicleOut] = []
+    ivms_events: list[IvmsEventOut] = []
     generated_at: str | None
 
 

@@ -92,6 +92,12 @@ class Tanker(Base):
     last_comm_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    # RFID-based vehicle tracking (gate reader identification) — a fixed tag
+    # id assigned at registration, read by the (simulated) station gate
+    # reader on every bay entry/exit. SIMULATION MODE: a synthetic tag
+    # identifier, never a real RFID credential.
+    rfid_tag_id: Mapped[str | None] = mapped_column(String(32))
+
     # Phase 9 — vehicle KYC (SIMULATION MODE: synthetic document numbers and
     # validity dates only). `registration_number` above is the Istimara
     # document number; `registration_expiry` is its validity date.

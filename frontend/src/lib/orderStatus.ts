@@ -60,6 +60,12 @@ const TONE_MAP: Record<string, StatusTone> = {
   // Driver qualification (stored as display strings, not enum keys)
   Certified: "green",
   "Renewal Due": "amber",
+  // Phase 10 — IVMS engine state / driver fatigue level
+  running: "green",
+  // ("idle" and "off" already covered above / fall back to grey)
+  normal: "green",
+  caution: "amber",
+  alert: "red",
 }
 
 export function statusTone(status: string): StatusTone {

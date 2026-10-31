@@ -563,6 +563,40 @@ export interface LoadingTelemetry {
   flow_rate_l_min: number
   ready_to_complete: boolean
   station_offline: boolean
+  rfid_tag_id: string | null
+}
+
+export interface RfidEvent {
+  id: string
+  tanker_code: string | null
+  rfid_tag_id: string | null
+  station_name: string
+  gate: "in" | "out"
+  reader: string
+  timestamp: string
+}
+
+export interface IvmsVehicle {
+  tanker_id: string
+  tanker_code: string
+  driver_name: string | null
+  status: string
+  engine_status: "running" | "idle" | "off"
+  speed_kmh: number
+  seatbelt_fastened: boolean
+  driving_score: number
+  harsh_events_session: number
+  fatigue_level: "normal" | "caution" | "alert"
+}
+
+export interface IvmsEvent {
+  id: string
+  tanker_code: string | null
+  driver_name: string | null
+  event_type: string
+  severity: "info" | "warning" | "critical"
+  message: string
+  timestamp: string
 }
 
 export interface StationConnectivity {
@@ -611,6 +645,9 @@ export interface LiveSnapshot {
   geofence_events: GeofenceEvent[]
   flow_events: FlowEvent[]
   stations: StationConnectivity[]
+  rfid_events: RfidEvent[]
+  ivms_vehicles: IvmsVehicle[]
+  ivms_events: IvmsEvent[]
   generated_at: string | null
 }
 

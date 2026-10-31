@@ -222,6 +222,7 @@ def seed():
                 last_lat=23.5880 + random.uniform(-2.0, 2.0),
                 last_lon=58.3829 + random.uniform(-2.5, 2.0),
                 last_comm_at=now - timedelta(minutes=random.randint(1, 60)),
+                rfid_tag_id=f"RFID-{kyc_rng.randint(0x10000000, 0xFFFFFFFF):08X}",
             )
             tankers.append(t)
         db.add_all(tankers)

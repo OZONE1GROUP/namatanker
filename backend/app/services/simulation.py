@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from app.database import SessionLocal
-from app.models.core import Alert, LoadingBay, Order, SimulationSettings, Station
+from app.models.core import Alert, LoadingBay, Order, SimulationSettings, Station, Tanker
 from app.models.enums import AlertSeverity, ConnectivityStatus, OrderStatus
 from app.services import kyc as kyc_service
 
@@ -51,11 +51,29 @@ ALERT_TEMPLATES = [
     ("Edge gateway heartbeat delayed", AlertSeverity.info, "Simulated heartbeat from the {station} edge gateway arrived late.", "Edge Gateway"),
 ]
 
+# IVMS (In-Vehicle Monitoring System) — driver-behavior event templates.
+# SIMULATION MODE: synthetic telemetry only, never a real IVMS device or
+# camera feed. Keyed by event_type -> (severity, message).
+IVMS_EVENT_TEMPLATES = {
+    "harsh_braking": ("warning", "Harsh braking detected"),
+    "harsh_acceleration": ("warning", "Harsh acceleration detected"),
+    "overspeeding": ("critical", "Posted speed limit exceeded"),
+    "seatbelt_violation": ("warning", "Seatbelt not fastened while driving"),
+    "fatigue_alert": ("critical", "Driver fatigue indicators detected"),
+    "idle_prolonged": ("info", "Engine idling beyond threshold"),
+}
+
 
 @dataclass
 class LoadingTelemetry:
     started_at: datetime
     flow_rate_l_min: float
+    # Captured at creation so an RFID gate-out event can still be logged
+    # with these details once the order leaves this engine's in-memory
+    # loading dict (the Order/Tanker objects may be long gone by then).
+    tanker_code: str | None = None
+    station_name: str = ""
+    rfid_tag_id: str | None = None
 
 
 @dataclass
@@ -76,6 +94,16 @@ class SimulationEngine:
         self._offline_queue_depth: dict[str, int] = {}
         self._event_seq = 0
         self._tick_counter = 0
+        # RFID-based vehicle tracking — gate-read event log, keyed off bay
+        # entry/exit (see _tick_loading).
+        self._rfid_events: list[dict] = []
+        self._rfid_event_seq = 0
+        # IVMS — per-tanker driving score / harsh-event tally persisted
+        # across ticks (keyed by tanker id), and the cumulative event log.
+        self._ivms_score: dict[str, float] = {}
+        self._ivms_harsh_count: dict[str, int] = {}
+        self._ivms_events: list[dict] = []
+        self._ivms_event_seq = 0
         self._snapshot: dict = {
             "simulation_time": None,
             "is_paused": False,
@@ -86,6 +114,9 @@ class SimulationEngine:
             "flow_events": [],
             "new_alerts": [],
             "stations": [],
+            "rfid_events": [],
+            "ivms_vehicles": [],
+            "ivms_events": [],
             "generated_at": None,
         }
         self._subscribers: list[asyncio.Queue] = []
@@ -174,6 +205,7 @@ class SimulationEngine:
 
             self._tick_flow_events(db, loading_snapshot, transit_snapshot, new_alerts, now)
             station_snapshot = self._tick_stations(db)
+            ivms_snapshot = self._tick_ivms(db, loading_snapshot, transit_snapshot, now)
 
             db.commit()
 
@@ -187,6 +219,9 @@ class SimulationEngine:
                 "flow_events": self._flow_events[-40:],
                 "new_alerts": new_alerts,
                 "stations": station_snapshot,
+                "rfid_events": self._rfid_events[-30:],
+                "ivms_vehicles": ivms_snapshot,
+                "ivms_events": self._ivms_events[-40:],
                 "generated_at": now.isoformat(),
             }
             await self._broadcast()
@@ -200,8 +235,17 @@ class SimulationEngine:
             seen.add(order.id)
             tel = self._loading.get(order.id)
             if tel is None:
-                tel = LoadingTelemetry(started_at=now, flow_rate_l_min=random.uniform(800, 1400))
+                tanker_code = order.tanker.tanker_code if order.tanker else None
+                rfid_tag_id = order.tanker.rfid_tag_id if order.tanker else None
+                tel = LoadingTelemetry(
+                    started_at=now,
+                    flow_rate_l_min=random.uniform(800, 1400),
+                    tanker_code=tanker_code,
+                    station_name=order.station.name,
+                    rfid_tag_id=rfid_tag_id,
+                )
                 self._loading[order.id] = tel
+                self._log_rfid_event(tel, "in")
             elapsed = (now - tel.started_at).total_seconds()
             target = order.authorized_quantity_l or order.requested_quantity_l
             progress = max(0.0, min(1.0, elapsed / LOADING_DURATION_SECONDS))
@@ -225,9 +269,11 @@ class SimulationEngine:
                 # WAN link is down (SIMULATION MODE) — readings just queue
                 # locally instead of reaching the central services live.
                 "station_offline": order.station.connectivity_status == ConnectivityStatus.offline,
+                "rfid_tag_id": tel.rfid_tag_id,
             })
         for oid in list(self._loading.keys()):
             if oid not in seen:
+                self._log_rfid_event(self._loading[oid], "out")
                 del self._loading[oid]
         return snapshot
 
@@ -351,6 +397,110 @@ class SimulationEngine:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
         self._geofence_events = self._geofence_events[-50:]
+
+    def _log_rfid_event(self, tel: LoadingTelemetry, gate: str) -> None:
+        """RFID-based vehicle tracking — a tanker's tag read by the (simulated)
+        station bay gate reader on entry (loading starts) or exit (loading
+        ends). SIMULATION MODE: synthetic tag reads only."""
+        self._rfid_event_seq += 1
+        self._rfid_events.append({
+            "id": f"rfid-{self._rfid_event_seq}",
+            "tanker_code": tel.tanker_code,
+            "rfid_tag_id": tel.rfid_tag_id,
+            "station_name": tel.station_name,
+            "gate": gate,
+            "reader": f"{tel.station_name} Bay Gate Reader",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+        self._rfid_events = self._rfid_events[-30:]
+
+    def _log_ivms_event(self, tanker_code: str | None, driver_name: str | None, event_type: str, now: datetime) -> None:
+        severity, message = IVMS_EVENT_TEMPLATES[event_type]
+        self._ivms_event_seq += 1
+        self._ivms_events.append({
+            "id": f"ivms-{self._ivms_event_seq}",
+            "tanker_code": tanker_code,
+            "driver_name": driver_name,
+            "event_type": event_type,
+            "severity": severity,
+            "message": message,
+            "timestamp": now.isoformat(),
+        })
+        self._ivms_events = self._ivms_events[-40:]
+
+    def _tick_ivms(self, db, loading_snapshot: list[dict], transit_snapshot: list[dict], now: datetime) -> list[dict]:
+        """
+        IVMS (In-Vehicle Monitoring System) — SIMULATION MODE. Derives a
+        driver-behavior telemetry row for every tanker in the fleet each
+        tick: current speed/engine state (from whether it's actively
+        driving or loading this tick, matched by tanker_code against the
+        telemetry already computed above), occasional harsh-driving/
+        seatbelt/fatigue events, and a running driving score. Never
+        connected to a real IVMS device, dash-cam, or telematics unit.
+        """
+        driving_codes = {i["tanker_code"] for i in transit_snapshot if i["tanker_code"]}
+        loading_codes = {i["tanker_code"] for i in loading_snapshot if i["tanker_code"]}
+        tankers = db.query(Tanker).order_by(Tanker.tanker_code).all()
+
+        vehicles: list[dict] = []
+        for t in tankers:
+            score = self._ivms_score.get(t.id, 100.0)
+            harsh_count = self._ivms_harsh_count.get(t.id, 0)
+            driver_name = t.driver.display_name if t.driver else None
+
+            if t.tanker_code in driving_codes:
+                engine_status = "running"
+                speed = round(random.uniform(55, 95), 1)
+                seatbelt = random.random() > 0.04
+                if not seatbelt:
+                    self._log_ivms_event(t.tanker_code, driver_name, "seatbelt_violation", now)
+                if speed > 90 and random.random() < 0.15:
+                    speed = round(random.uniform(96, 112), 1)
+                    self._log_ivms_event(t.tanker_code, driver_name, "overspeeding", now)
+                    score = max(0.0, score - 4)
+                    harsh_count += 1
+                elif random.random() < 0.02:
+                    kind = random.choice(["harsh_braking", "harsh_acceleration"])
+                    self._log_ivms_event(t.tanker_code, driver_name, kind, now)
+                    score = max(0.0, score - 3)
+                    harsh_count += 1
+                elif random.random() < 0.006:
+                    self._log_ivms_event(t.tanker_code, driver_name, "fatigue_alert", now)
+                    score = max(0.0, score - 6)
+                    harsh_count += 1
+                else:
+                    score = min(100.0, score + 0.3)
+            elif t.tanker_code in loading_codes:
+                engine_status = "idle"
+                speed = 0.0
+                seatbelt = True
+                if random.random() < 0.01:
+                    self._log_ivms_event(t.tanker_code, driver_name, "idle_prolonged", now)
+                score = min(100.0, score + 0.1)
+            else:
+                engine_status = "off"
+                speed = 0.0
+                seatbelt = True
+                score = min(100.0, score + 0.1)
+
+            fatigue_level = "alert" if score < 70 else "caution" if score < 85 else "normal"
+
+            self._ivms_score[t.id] = score
+            self._ivms_harsh_count[t.id] = harsh_count
+
+            vehicles.append({
+                "tanker_id": t.id,
+                "tanker_code": t.tanker_code,
+                "driver_name": driver_name,
+                "status": t.status.value,
+                "engine_status": engine_status,
+                "speed_kmh": speed,
+                "seatbelt_fastened": seatbelt,
+                "driving_score": round(score, 1),
+                "harsh_events_session": harsh_count,
+                "fatigue_level": fatigue_level,
+            })
+        return vehicles
 
     def _maybe_spawn_alert(self, db) -> "Alert | None":
         stations = db.query(Station).all()

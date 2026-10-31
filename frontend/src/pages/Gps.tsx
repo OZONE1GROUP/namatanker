@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom"
-import { Truck, MapPin, LogOut } from "lucide-react"
+import { Truck, MapPin, LogOut, Map } from "lucide-react"
 import { useLiveSnapshot } from "@/lib/useLiveSnapshot"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card"
+import { OmanMap } from "@/components/gps/OmanMap"
 import { formatTime } from "@/lib/utils"
 
 export function Gps() {
@@ -18,7 +19,21 @@ export function Gps() {
         <Card className="p-8 text-center text-sm text-(--app-text-muted)">
           {connected ? "Connecting…" : "Connecting to the simulation engine…"}
         </Card>
-      ) : snapshot.transit.length === 0 ? (
+      ) : (
+        <Card className="overflow-hidden p-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Map className="h-4 w-4 text-teal-500" /> Live Map — Oman
+            </CardTitle>
+            <span className="text-xs text-(--app-text-muted)">
+              {snapshot.transit.length} tanker{snapshot.transit.length === 1 ? "" : "s"} in transit
+            </span>
+          </CardHeader>
+          <OmanMap transit={snapshot.transit} />
+        </Card>
+      )}
+
+      {!snapshot ? null : snapshot.transit.length === 0 ? (
         <Card className="p-10 text-center text-sm text-(--app-text-muted)">No tankers are currently in transit.</Card>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">

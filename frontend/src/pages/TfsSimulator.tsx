@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Fuel, Gauge } from "lucide-react"
+import { Fuel, Gauge, ScanLine, LogIn, LogOut } from "lucide-react"
 import { useLiveSnapshot } from "@/lib/useLiveSnapshot"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card"
 import { Button } from "@/components/ui/Button"
 import { orderActions, ApiError } from "@/lib/api"
-import { formatNumber } from "@/lib/utils"
+import { formatNumber, formatTime } from "@/lib/utils"
 
 export function TfsSimulator() {
   const navigate = useNavigate()
@@ -94,6 +94,11 @@ export function TfsSimulator() {
                   <span>{active.progress_pct.toFixed(1)}% full</span>
                   {active.ready_to_complete && <span className="font-medium text-status-green">Ready to complete</span>}
                 </div>
+                {active.rfid_tag_id && (
+                  <p className="mt-2 flex items-center gap-1 text-xs text-(--app-text-muted)">
+                    <ScanLine className="h-3.5 w-3.5 text-teal-500" /> RFID tag <span className="font-mono text-(--app-text)">{active.rfid_tag_id}</span> read at bay gate
+                  </p>
+                )}
               </div>
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
                 <Button variant="primary" loading={submitting} onClick={stopAndComplete}>
@@ -110,6 +115,42 @@ export function TfsSimulator() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ScanLine className="h-4 w-4 text-teal-500" /> RFID Gate Reads
+          </CardTitle>
+          <span className="text-xs text-(--app-text-muted)">RFID-based vehicle tracking — bay gate tag reads</span>
+        </CardHeader>
+        <CardContent>
+          {!snapshot || snapshot.rfid_events.length === 0 ? (
+            <p className="text-sm text-(--app-text-muted)">No RFID gate reads logged yet this session.</p>
+          ) : (
+            <ul className="space-y-2">
+              {[...snapshot.rfid_events].reverse().map((e) => (
+                <li
+                  key={e.id}
+                  className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+                  style={{ borderColor: "var(--app-border)" }}
+                >
+                  <span className="flex items-center gap-2 text-(--app-text)">
+                    {e.gate === "in" ? (
+                      <LogIn className="h-3.5 w-3.5 text-status-green" />
+                    ) : (
+                      <LogOut className="h-3.5 w-3.5 text-status-amber" />
+                    )}
+                    <span className="font-medium">{e.tanker_code}</span>
+                    tag <span className="font-mono text-xs text-(--app-text-muted)">{e.rfid_tag_id}</span> read{" "}
+                    {e.gate === "in" ? "entering" : "exiting"} <span className="text-(--app-text-muted)">{e.reader}</span>
+                  </span>
+                  <span className="text-xs text-(--app-text-muted)">{formatTime(e.timestamp)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
